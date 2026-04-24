@@ -1,9 +1,9 @@
 import axios from 'axios'
 
 const API = axios.create({
-    baseURL: 'http://localhost:8000/api'
-    })
+    baseURL: '/'
+})
 
 export function loginAPI(data) {
-    return API.post('/login', data
-    )}
+    return API.post('/login', data)
+}

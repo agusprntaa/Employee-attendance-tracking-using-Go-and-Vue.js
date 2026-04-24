@@ -18,55 +18,49 @@ const errorUsername = ref('')
 const errorPassword = ref('')
 const errorGlobal = ref('')
 
-//init
+// INIT
 onMounted(() => {
-  // auto username
+  // Auto-isi email jika remember diaktifkan sebelumnya
   const isRemember = localStorage.getItem('remember')
   const savedUsername = localStorage.getItem('savedUsername')
-
   if (isRemember === 'true' && savedUsername) {
     username.value = savedUsername
     remember.value = true
   }
 
-  // auto login
+  // Auto-login jika token & user masih ada
   const token = localStorage.getItem('token')
-  const user = JSON.parse(localStorage.getItem('user'))
-
-  if (token && user) {
+  const userRaw = localStorage.getItem('user')
+  if (token && userRaw) {
+    const user = JSON.parse(userRaw)
     redirectByRole(user)
   }
 })
 
-//redirect
+// REDIRECT berdasarkan role & tipe
+// role dari backend: "super_admin" / "admin_cabang" / "karyawan"
+// tipe dari backend: "pusat" / "cabang"
 function redirectByRole(user) {
-  const { role, tipe } = user
+  const { role } = user
 
-  const routeMap = {
-    admin: {
-      cabang: '/admin-cabang/dashboard',
-      pusat: '/admin-pusat/dashboard'
-    },
-    karyawan: '/employee/dashboard'
+  if (role === 'super_admin') {
+    return router.push('/admin-pusat/dashboard')
   }
 
-  if (role === 'admin') {
-    const path = routeMap.admin[tipe]
-    if (!path) return console.error('Tipe admin tidak valid')
-    return router.push(path)
+  if (role === 'admin_cabang') {
+    return router.push('/admin-cabang/dashboard')
   }
 
   if (role === 'karyawan') {
-    return router.push(routeMap.karyawan)
+    return router.push('/employee/dashboard')
   }
 
-  console.error('Role tidak valid')
+  console.error('Role tidak dikenali:', role)
 }
 
-//location
+// MINTA IZIN LOKASI
 function requestLocation() {
   locationError.value = ''
-
   navigator.geolocation.getCurrentPosition(
     () => {
       locationGranted.value = true
@@ -81,10 +75,9 @@ function requestLocation() {
   )
 }
 
-//validasi
+// VALIDASI FORM
 function validate() {
   let valid = true
-
   errorUsername.value = ''
   errorPassword.value = ''
   errorGlobal.value = ''
@@ -107,11 +100,11 @@ function validate() {
   return valid
 }
 
-//login
+// LOGIN
 async function login() {
   if (loading.value) return
 
-  // paksa minta lokasi dulu
+  // Minta izin lokasi dulu jika belum
   if (!locationGranted.value) {
     await new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
@@ -139,16 +132,15 @@ async function login() {
       password: password.value.trim()
     })
 
-    console.log('USER FROM API:', res.data.user)
+    // Response dari backend sekarang: { status, data: { token, refresh_token, user } }
+    const { token, refresh_token, user } = res.data.data
 
-    const token = res.data.token
-    const user = res.data.user
-
-    // simpan ke localStorage
+    // Simpan ke localStorage
     localStorage.setItem('token', token)
+    localStorage.setItem('refresh_token', refresh_token)
     localStorage.setItem('user', JSON.stringify(user))
 
-    // remember username
+    // Remember username
     if (remember.value) {
       localStorage.setItem('remember', 'true')
       localStorage.setItem('savedUsername', username.value)
@@ -157,13 +149,15 @@ async function login() {
       localStorage.removeItem('savedUsername')
     }
 
-    // redirect
     redirectByRole(user)
 
   } catch (err) {
-    console.log('ERROR:', err)
+    console.error('Login error:', err)
+    // Ambil pesan error dari response backend
     errorGlobal.value =
-      err.response?.data?.message || 'Login gagal'
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      'Login gagal, coba lagi'
   } finally {
     loading.value = false
   }
@@ -175,31 +169,50 @@ async function login() {
     <div class="card">
       <h2>ABSENSI KARYAWAN</h2>
 
-      <div class="location-box" @click="requestLocation">
+      <!-- Tombol izin lokasi -->
+      <div
+        class="location-box"
+        :class="{ active: locationGranted }"
+        @click="requestLocation"
+      >
         <span>
-          {{ locationGranted ? 'Lokasi aktif' : 'Izin lokasi diperlukan' }}
+          {{ locationGranted ? '✓ Lokasi aktif' : 'Klik untuk izin lokasi' }}
         </span>
       </div>
       <p v-if="locationError" class="error">{{ locationError }}</p>
-      
+
+      <!-- Input username -->
       <label>Username</label>
-      <input v-model="username" placeholder="Masukkan username" />
+      <input
+        v-model="username"
+        type="text"
+        placeholder="Masukkan username"
+        @keyup.enter="login"
+      />
       <p v-if="errorUsername" class="error">{{ errorUsername }}</p>
 
+      <!-- Input password -->
       <label>Password</label>
-      <input type="password" v-model="password" placeholder="Masukkan password" />
+      <input
+        type="password"
+        v-model="password"
+        placeholder="Masukkan password"
+        @keyup.enter="login"
+      />
       <p v-if="errorPassword" class="error">{{ errorPassword }}</p>
-      
-    <label class="remember">
+
+      <!-- Remember me -->
+      <label class="remember">
         <input type="checkbox" v-model="remember" />
         <span>Ingat saya</span>
-    </label>
+      </label>
 
+      <!-- Tombol login -->
       <button @click="login" :disabled="loading">
         {{ loading ? 'Loading...' : 'Sign In' }}
       </button>
 
-      <p v-if="errorGlobal" class="error">{{ errorGlobal }}</p>
+      <p v-if="errorGlobal" class="error global-error">{{ errorGlobal }}</p>
     </div>
   </div>
 </template>
@@ -220,7 +233,7 @@ async function login() {
   background: #ffffff;
   padding: 32px 28px;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
 h2 {
@@ -234,14 +247,23 @@ h2 {
   background: #e5e7eb;
   padding: 10px;
   border-radius: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   cursor: pointer;
   text-align: center;
+  transition: background 0.2s;
+}
+
+.location-box.active {
+  background: #d1fae5;
 }
 
 .location-box span {
   font-size: 12px;
   color: gray;
+}
+
+.location-box.active span {
+  color: #065f46;
 }
 
 label {
@@ -251,12 +273,15 @@ label {
   margin-top: 12px;
 }
 
-input {
+input[type='text'],
+input[type='email'],
+input[type='password'] {
   width: 100%;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid #ddd;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 .remember {
@@ -281,9 +306,10 @@ button {
   margin-top: 24px;
   border: none;
   border-radius: 14px;
-  background:#4f46e5;
+  background: #4f46e5;
   color: white;
   font-weight: 600;
+  cursor: pointer;
 }
 
 button:disabled {
@@ -295,5 +321,10 @@ button:disabled {
   color: #dc2626;
   font-size: 12px;
   margin-top: 4px;
+}
+
+.global-error {
+  text-align: center;
+  margin-top: 12px;
 }
 </style>

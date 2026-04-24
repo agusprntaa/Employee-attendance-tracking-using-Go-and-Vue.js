@@ -15,7 +15,7 @@ import (
 func main() {
 	app := fiber.New()
 
-	// middleware global
+	// middleware global - allow all origins
 	app.Use(cors.New())
 
 	// koneksi DB
