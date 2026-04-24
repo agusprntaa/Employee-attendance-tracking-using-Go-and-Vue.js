@@ -5,7 +5,7 @@ import { loginAPI } from '../../services/auth'
 
 const router = useRouter()
 
-// state
+// STATE
 const username = ref('')
 const password = ref('')
 const remember = ref(false)
@@ -18,7 +18,7 @@ const errorUsername = ref('')
 const errorPassword = ref('')
 const errorGlobal = ref('')
 
-// INIT
+//init
 onMounted(() => {
   // auto username
   const isRemember = localStorage.getItem('remember')
@@ -29,23 +29,18 @@ onMounted(() => {
     remember.value = true
   }
 
-  // auto login (lebih aman)
+  // auto login
   const token = localStorage.getItem('token')
-  const role = localStorage.getItem('role')
+  const user = JSON.parse(localStorage.getItem('user'))
 
-  if (
-    token &&
-    token !== 'undefined' &&
-    token !== 'null' &&
-    role
-  ) {
-    redirectByRole(role)
+  if (token && user) {
+    redirectByRole(user)
   }
 })
 
-// REDIRECT ROLE
+//redirect
 function redirectByRole(user) {
-  const { role, type } = user
+  const { role, tipe } = user
 
   const routeMap = {
     admin: {
@@ -56,8 +51,8 @@ function redirectByRole(user) {
   }
 
   if (role === 'admin') {
-    const path = routeMap.admin[type]
-    if (!path) return console.error('Type admin tidak valid')
+    const path = routeMap.admin[tipe]
+    if (!path) return console.error('Tipe admin tidak valid')
     return router.push(path)
   }
 
@@ -68,29 +63,25 @@ function redirectByRole(user) {
   console.error('Role tidak valid')
 }
 
-// LOCATION
+//location
 function requestLocation() {
   locationError.value = ''
 
   navigator.geolocation.getCurrentPosition(
     () => {
       locationGranted.value = true
-      locationError.value = '' // clear error
+      locationError.value = ''
     },
     (err) => {
-      if (err.code === 1) {
-        locationError.value = 'Izin lokasi ditolak'
-      } else if (err.code === 2) {
-        locationError.value = 'Lokasi tidak tersedia'
-      } else if (err.code === 3) {
-        locationError.value = 'Request lokasi timeout'
-      }
+      if (err.code === 1) locationError.value = 'Izin lokasi ditolak'
+      else if (err.code === 2) locationError.value = 'Lokasi tidak tersedia'
+      else if (err.code === 3) locationError.value = 'Request lokasi timeout'
     },
     { timeout: 5000 }
   )
 }
 
-// VALIDASI
+//validasi
 function validate() {
   let valid = true
 
@@ -116,11 +107,11 @@ function validate() {
   return valid
 }
 
-// LOGIN
+//login
 async function login() {
-  if (loading.value) return // prevent spam
+  if (loading.value) return
 
-  // paksa cek lokasi dulu
+  // paksa minta lokasi dulu
   if (!locationGranted.value) {
     await new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
@@ -129,17 +120,10 @@ async function login() {
           locationError.value = ''
           resolve()
         },
-        (err) => {
-          if (err.code === 1) {
-            locationError.value = 'Izin lokasi ditolak'
-          } else if (err.code === 2) {
-            locationError.value = 'Lokasi tidak tersedia'
-          } else if (err.code === 3) {
-            locationError.value = 'Request lokasi timeout'
-          }
+        () => {
+          locationError.value = 'Izin lokasi diperlukan'
           resolve()
-        },
-        { timeout: 5000 }
+        }
       )
     })
   }
@@ -155,12 +139,14 @@ async function login() {
       password: password.value.trim()
     })
 
-    const token = res.data.token
-    const role = res.data.user.role
+    console.log('USER FROM API:', res.data.user)
 
-    // simpan token & role
+    const token = res.data.token
+    const user = res.data.user
+
+    // simpan ke localStorage
     localStorage.setItem('token', token)
-    localStorage.setItem('role', role)
+    localStorage.setItem('user', JSON.stringify(user))
 
     // remember username
     if (remember.value) {
@@ -172,12 +158,10 @@ async function login() {
     }
 
     // redirect
-    redirectByRole(role)
-  
-  } catch (err) {
-    console.log('ERROR FULL:', err)
-    console.log('ERROR RESPONSE:', err.response)
+    redirectByRole(user)
 
+  } catch (err) {
+    console.log('ERROR:', err)
     errorGlobal.value =
       err.response?.data?.message || 'Login gagal'
   } finally {
@@ -222,89 +206,94 @@ async function login() {
 
 <style scoped>
 .container {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #f3f4f6;
-    padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f3f4f6;
+  padding: 20px;
 }
 
 .card {
-    width: 100%;
-    max-width: 420px;
-    background: #ffffff;
-    padding: 32px 28px;
-    border-radius: 24px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  padding: 32px 28px;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
 }
 
 h2 {
-    text-align: center;
-    margin-bottom: 24px;
-    font-weight: 700;
-    font-size: 24px;
+  text-align: center;
+  margin-bottom: 24px;
+  font-weight: 700;
+  font-size: 24px;
 }
 
 .location-box {
-    background: #e5e7eb;
-    padding: 14px;
-    border-radius: 14px;
-    margin-bottom: 20px;
-    cursor: pointer;
-    text-align: center;
+  background: #e5e7eb;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.location-box span {
+  font-size: 12px;
+  color: gray;
 }
 
 label {
-    display: block;
-    font-size: 14px;
-    margin-bottom: 6px;
-    margin-top: 12px;
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+  margin-top: 12px;
 }
 
 input {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    border: 1px solid #ddd;
-    font-size: 14px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #ddd;
+  font-size: 14px;
 }
 
 .remember {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 12px;
-    cursor: pointer;
-    font-size: 14px;
-    color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
 }
 
 .remember input {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 button {
-    width: 100%;
-    padding: 16px;
-    margin-top: 24px;
-    border: none;
-    border-radius: 14px;
-    background:#4f46e5;
-    color: white;
-    font-weight: 600;
+  width: 100%;
+  padding: 16px;
+  margin-top: 24px;
+  border: none;
+  border-radius: 14px;
+  background:#4f46e5;
+  color: white;
+  font-weight: 600;
 }
 
 button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .error {
-    color: #dc2626;
-    font-size: 12px;
-    margin-top: 4px;
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
 }
 </style>
