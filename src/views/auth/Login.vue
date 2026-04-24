@@ -44,14 +44,28 @@ onMounted(() => {
 })
 
 // REDIRECT ROLE
-function redirectByRole(role) {
-  router.push(
-    role === 'admin-cabang'
-      ? '/admin-cabang/dashboard'
-      : role === 'admin-pusat'
-      ? '/admin-pusat/dashboard'
-      : '/employee/dashboard'
-  )
+function redirectByRole(user) {
+  const { role, type } = user
+
+  const routeMap = {
+    admin: {
+      cabang: '/admin-cabang/dashboard',
+      pusat: '/admin-pusat/dashboard'
+    },
+    karyawan: '/employee/dashboard'
+  }
+
+  if (role === 'admin') {
+    const path = routeMap.admin[type]
+    if (!path) return console.error('Type admin tidak valid')
+    return router.push(path)
+  }
+
+  if (role === 'karyawan') {
+    return router.push(routeMap.karyawan)
+  }
+
+  console.error('Role tidak valid')
 }
 
 // LOCATION
@@ -159,8 +173,11 @@ async function login() {
 
     // redirect
     redirectByRole(role)
-
+  
   } catch (err) {
+    console.log('ERROR FULL:', err)
+    console.log('ERROR RESPONSE:', err.response)
+
     errorGlobal.value =
       err.response?.data?.message || 'Login gagal'
   } finally {
