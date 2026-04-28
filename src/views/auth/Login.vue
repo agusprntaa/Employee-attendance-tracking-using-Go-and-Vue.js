@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { loginAPI } from '../../services/auth'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
+const { setUser } = useAuth()
 
 // STATE
 const username = ref('')
@@ -38,8 +40,6 @@ onMounted(() => {
 })
 
 // REDIRECT berdasarkan role & tipe
-// role dari backend: "super_admin" / "admin_cabang" / "karyawan"
-// tipe dari backend: "pusat" / "cabang"
 function redirectByRole(user) {
   const { role } = user
 
@@ -132,13 +132,15 @@ async function login() {
       password: password.value.trim()
     })
 
-    // Response dari backend sekarang: { status, data: { token, refresh_token, user } }
+    // Response dari backend { status, data: { token, refresh_token, user } }
     const { token, refresh_token, user } = res.data.data
 
     // Simpan ke localStorage
     localStorage.setItem('token', token)
     localStorage.setItem('refresh_token', refresh_token)
-    localStorage.setItem('user', JSON.stringify(user))
+    setUser(user)
+    
+    redirectByRole(user)
 
     // Remember username
     if (remember.value) {

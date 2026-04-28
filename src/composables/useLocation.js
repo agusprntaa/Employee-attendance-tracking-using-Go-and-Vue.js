@@ -9,7 +9,7 @@ export function useLocation() {
   const error = ref('')
   const loading = ref(false)
 
-  // default (nanti bisa dari backend)
+  // default (nanti dari backend)
   const officeLat = -8.65
   const officeLng = 115.216
   const radius = 100
