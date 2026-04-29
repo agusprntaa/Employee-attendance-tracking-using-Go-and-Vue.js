@@ -1,118 +1,159 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import { useLocation } from '@/composables/useLocation'
-import { checkInAPI} from '@/services/attendance'
+import { checkInAPI } from '@/services/attendance'
 
 const router = useRouter()
 
-//state
+// STATE
 const loading = ref(false)
 const error = ref('')
 const scanned = ref(false)
 
-const { isInRadius, getCurrentLocation } = useLocation()
+// GEO
+const {
+  latitude,
+  longitude,
+  accuracy,
+  getCurrentLocation
+} = useLocation()
 
 let codeReader = null
+let videoElement = null
 
-//init
+// INIT
 onMounted(async () => {
-    const ok = await getCurrentLocation()
-    if(!ok) {
-        error.value = 'Gagal mengambil lokasi'
-        return
-    }
-    startScanner()
+  videoElement = document.getElementById('video')
+
+  const ok = await getCurrentLocation()
+  if (!ok) {
+    error.value = 'Gagal mengambil lokasi'
+    return
+  }
+
+  startScanner()
 })
 
 onUnmounted(() => {
-    stopScanner()
+  stopScanner()
 })
 
-//start scan
+// START SCAN
 async function startScanner() {
-    codeReader = new BrowserMultiFormatReader()
+  codeReader = new BrowserMultiFormatReader()
 
-    try {
-        await codeReader.decodeFromVideoDevice(
-            null,
-            document.getElementById('video'),
-            (result, err) => {
-                if (result) {
-                    handleScan(result.getText())
-                }
-            }
-        )
-    } catch (err) {
-        console.error (err) 
-        error.value = 'Gagal mengakses kamera'
-    }
-}
-
-//stop scan
-function stopScanner() {
-    if(codeReader) {
-        codeReader.reset()
-    }
-}
-
-//handle scan
-async function handleScan(decodedText) {
-    if (scanned.value) return
-    scanned.value = true
-    loading.value = true
-
-    stopScanner()
-
-    try {
-        if (!isInRadius.value) {
-            alert('Anda diluar radius kantor')
-            return router.push('/employee/dashboard')
+  try {
+    await codeReader.decodeFromVideoDevice(
+      undefined, 
+      videoElement,
+      (result) => {
+        if (result) {
+          handleScan(result.getText())
         }
-        await checkInAPI( {
-            qr_code: decodedText
-        }) 
-        router.push('/employee/success')
-    } catch (err) {
-        console.error(err)
-        alert('Check In gagal')
-        router.push('/employee/dashboard')
-    } finally {
-        loading.value = false
-    }
+      }
+    )
+  } catch (err) {
+    console.error(err)
+    error.value = 'Gagal mengakses kamera'
+  }
 }
-//back
+
+// STOP SCAN
+function stopScanner() {
+  try {
+    codeReader?.reset()
+  } catch (e) {
+    console.warn('Scanner stop error', e)
+  }
+}
+
+// HANDLE SCAN
+async function handleScan(decodedText) {
+  if (scanned.value) return
+
+  scanned.value = true
+  loading.value = true
+
+  stopScanner()
+
+  try {
+    let qrData
+
+    try {
+      qrData = JSON.parse(decodedText)
+    } catch {
+      throw new Error('QR tidak valid')
+    }
+
+    if (!qrData.token || !qrData.branch_id) {
+      throw new Error('QR tidak sesuai format')
+    }
+
+    const payload = {
+      work_type: 'WFO',
+      lat: latitude.value,
+      lon: longitude.value,
+      accuracy: accuracy.value,
+      qr_token: qrData.token,
+      branch_id: qrData.branch_id
+    }
+
+    await checkInAPI(payload)
+
+    router.push('/employee/success')
+
+  } catch (err) {
+    console.error(err)
+
+    alert(
+      err.response?.data?.message ||
+      err.message ||
+      'Check-in gagal'
+    )
+
+    router.push({
+        path: '/employee/success',
+        query: {
+            type: 'wfo',
+            time: res.data.data.check_in
+        }
+    })
+
+  } finally {
+    loading.value = false
+  }
+}
+
+// BACK
 function goBack() {
-    router.back()
+  stopScanner()
+  router.back()
 }
 </script>
 
 <template>
-    <div class="wrapper">
-
-        <div class="header">
-        <img src="/public/goBack.png"
-        class="back"
-        @click="goBack">
-        </div>
-        
-        <div v-if="error" class="error">
-            {{ error }}
-        </div>
-
-        <div class="scan-box">
-            <video id="video" autoplay muted playsinlin></video>
-
-            <div class="frame"></div>
-        </div>
-
-        <div class="scan-status">
-            <span class="spinner">⟳</span>
-            <span>{{ loading? 'memproses...' :'scanning...' }}</span>
-        </div>
+<div class="wrapper">
+    
+    <div class="header">
+        <img src="/goBack.png" class="back" @click="goBack">
     </div>
 
+    <div v-if="error" class="error">
+        {{ error }}
+    </div>
+
+    <div class="scan-box">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="frame"></div>
+    </div>
+
+    <div class="scan-status">
+        <span class="spinner">⟳</span>
+        <span>{{ loading ? 'Memproses...' : 'Scanning...' }}</span>
+    </div>
+</div>
 </template>
 
 <style scoped>
@@ -124,16 +165,15 @@ function goBack() {
 }
 
 .header {
-    height: 70px;
+    height: 60px;
     background: #4f46e5;
     display: flex;
     align-items: center;
-    padding: 0 16px;
+    padding: 0 30px;
 }
 
 .back {
-    color: white;
-    font-size: 20px;
+    width: 24px;
     cursor: pointer;
 }
 
@@ -194,7 +234,7 @@ video {
 
 @keyframes spin {
     100% {
-        transform: rotate(360deg);
-    }
+    transform: rotate(360deg);
+  }
 }
 </style>

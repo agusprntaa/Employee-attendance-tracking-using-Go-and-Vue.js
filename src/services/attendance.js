@@ -1,13 +1,9 @@
-import axios from 'axios'
+import API from './api'
 
-const API = axios.create({
-  baseURL: '/'
-})
-
-export function checkInAPI() {
-  return API.post('/attendance/check-in')
+export function checkInAPI(data) {
+  return API.post('/attendance/checkin', data) 
 }
 
-export function getAttendanceHistory() {
-  return API.get('/attendance/history')
+export function getAttendanceHistory(page = 1, limit = 10) {
+  return API.get(`/attendance/history?page=${page}&limit=${limit}`)
 }

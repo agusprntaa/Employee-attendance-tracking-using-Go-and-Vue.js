@@ -1,18 +1,48 @@
 import { ref } from 'vue'
 import { getDistance } from '@/utils/geo'
+import { OFFICE_LOCATIONS } from '@/config/location'
 
 export function useLocation() {
   const latitude = ref(null)
   const longitude = ref(null)
+  const accuracy = ref(null)
+
   const distance = ref(0)
   const isInRadius = ref(false)
+  const nearestOffice = ref(null)
+
   const error = ref('')
   const loading = ref(false)
 
-  // default (nanti dari backend)
-  const officeLat = -8.65
-  const officeLng = 115.216
-  const radius = 100
+  function calculateNearestOffice() {
+    let minDistance = Infinity
+    let selectedOffice = null
+
+    for (const office of OFFICE_LOCATIONS) {
+      const dist = getDistance(
+        office.lat,
+        office.lon,
+        latitude.value,
+        longitude.value
+      )
+
+      if (dist < minDistance) {
+        minDistance = dist
+        selectedOffice = office
+      }
+    }
+
+    distance.value = minDistance
+    nearestOffice.value = selectedOffice
+
+    // validasi radius
+    if (accuracy.value > 50) {
+      isInRadius.value = false
+      error.value = 'Lokasi tidak akurat'
+    } else {
+      isInRadius.value = minDistance <= selectedOffice.radius
+    }
+  }
 
   function getCurrentLocation() {
     loading.value = true
@@ -23,25 +53,25 @@ export function useLocation() {
         (pos) => {
           latitude.value = pos.coords.latitude
           longitude.value = pos.coords.longitude
+          accuracy.value = pos.coords.accuracy
 
-          distance.value = getDistance(
-            officeLat,
-            officeLng,
-            latitude.value,
-            longitude.value
-          )
-
-          isInRadius.value = distance.value <= radius
+          calculateNearestOffice()
 
           loading.value = false
           resolve(true)
         },
-        () => {
-          error.value = 'Gagal mengambil lokasi'
+        (err) => {
+          if (err.code === 1) error.value = 'Izin lokasi ditolak'
+          else if (err.code === 2) error.value = 'Lokasi tidak tersedia'
+          else error.value = 'Gagal mengambil lokasi'
+
           loading.value = false
           resolve(false)
         },
-        { timeout: 5000 }
+        {
+          enableHighAccuracy: true,
+          timeout: 7000
+        }
       )
     })
   }
@@ -49,8 +79,10 @@ export function useLocation() {
   return {
     latitude,
     longitude,
+    accuracy,
     distance,
     isInRadius,
+    nearestOffice,
     error,
     loading,
     getCurrentLocation

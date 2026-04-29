@@ -1,9 +1,5 @@
-import axios from 'axios'
-
-const API = axios.create({
-    baseURL: '/'
-})
+import API from './api'
 
 export function loginAPI(data) {
-    return API.post('/login', data)
+  return API.post('/login', data)
 }

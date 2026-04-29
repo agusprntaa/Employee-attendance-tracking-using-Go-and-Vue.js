@@ -1,5 +1,5 @@
 export function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371e3 // meter
+  const R = 6371e3
   const φ1 = (lat1 * Math.PI) / 180
   const φ2 = (lat2 * Math.PI) / 180
   const Δφ = ((lat2 - lat1) * Math.PI) / 180
@@ -14,5 +14,5 @@ export function getDistance(lat1, lon1, lat2, lon2) {
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
-  return R * c // hasil meter
+  return R * c
 }

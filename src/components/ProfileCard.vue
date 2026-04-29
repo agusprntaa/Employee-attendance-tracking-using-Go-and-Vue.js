@@ -56,38 +56,40 @@ function goToChangePassword() {
 .profile-card {
   background: white;
   padding: 20px;
-  border-radius: 24px;
+  border-radius: 20px; 
   margin-bottom: 16px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
 .top {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
 }
 
 .avatar {
-  width: 70px;
-  height: 70px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: linear-gradient(135deg, #6b8cff, #4f46e5);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 20px;
+  font-weight: 600;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .info h3 {
   margin: 4px 0;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .info p {
   font-size: 12px;
-  color: #666;
+  color: #6b7280; 
 }
 
 .badge {
@@ -95,23 +97,44 @@ function goToChangePassword() {
   color: white;
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .divider {
-  border-top: 2px dashed #ddd;
+  border-top: 1px dashed #e5e7eb;
   margin: 16px 0;
 }
 
 .btn-change {
   width: 100%;
-  padding: 10px;
-  border-radius: 12px;
+  padding: 12px;
+  border-radius: 14px; 
   background: #4f46e5;
   color: white;
   border: none;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .profile-card {
+    padding: 24px;
+  }
+
+  .avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 20px;
+  }
+
+  .info h3 {
+    font-size: 16px;
+  }
+
+  .btn-change {
+    padding: 14px;
+  }
 }
 </style>
