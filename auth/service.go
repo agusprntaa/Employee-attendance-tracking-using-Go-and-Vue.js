@@ -18,6 +18,7 @@ type User struct {
 	Username     string
 	Role         string
 	EmployeeType string
+	BranchID     int
 }
 
 func (s *Service) Login(username, password string) (string, string, *User, error) {
@@ -32,8 +33,15 @@ func (s *Service) Login(username, password string) (string, string, *User, error
 	}
 
 	// generate tokens
-	access, _ := utils.GenerateAccessToken(user.ID, user.Role)
-	refresh, exp, _ := utils.GenerateRefreshToken(user.ID)
+	access, err := utils.GenerateAccessToken(user.ID, user.Role, user.BranchID)
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	refresh, exp, err := utils.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return "", "", nil, err
+	}
 
 	// simpan refresh token ke DB
 	s.Repo.SaveRefreshToken(user.ID, refresh, exp)
@@ -42,12 +50,16 @@ func (s *Service) Login(username, password string) (string, string, *User, error
 }
 
 func (s *Service) Refresh(oldToken string) (string, error) {
-	userID, role, err := s.Repo.ValidateRefreshToken(oldToken)
+	// Sekarang ValidateRefreshToken return 4 nilai — userID, role, branchID, error
+	userID, role, branchID, err := s.Repo.ValidateRefreshToken(oldToken)
 	if err != nil {
 		return "", errors.New("invalid refresh token")
 	}
-
-	newAccess, _ := utils.GenerateAccessToken(userID, role)
+	// Generate token baru dengan role + branchID yang benar dari DB
+	newAccess, err := utils.GenerateAccessToken(userID, role, branchID)
+	if err != nil {
+		return "", err
+	}
 
 	return newAccess, nil
 }
@@ -61,6 +73,5 @@ func (s *Service) CreateUser(username, password, name, role, tipe string) error 
 	if err != nil {
 		return err
 	}
-
 	return s.Repo.CreateUser(username, hashed, name, role, tipe)
 }
