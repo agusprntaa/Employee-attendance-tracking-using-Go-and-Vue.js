@@ -9,49 +9,64 @@ type Repository struct {
 	DB *sql.DB
 }
 
-func (r *Repository) FindUser(username string) (int, string, string, error) {
-	var id int
-	var passsword, role string
+// FindUser
+func (r *Repository) FindUser(username string) (*User, string, error) {
+	var user User
+	var hashed string
 
 	err := r.DB.QueryRow(`
-		SELECT id, password, role
+		SELECT id, name, username, role, tipe, branch_id, password
 		FROM employees
 		WHERE username = $1
-		`, username).Scan(&id, &passsword, &role)
+	`, username).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Username,
+		&user.Role,
+		&user.EmployeeType,
+		&user.BranchID,
+		&hashed,
+	)
 
-	return id, passsword, role, err
+	if err != nil {
+		return nil, "", err
+	}
+
+	return &user, hashed, nil
 }
 
 func (r *Repository) SaveRefreshToken(userID int, token string, exp time.Time) error {
 	_, err := r.DB.Exec(`
 		INSERT INTO refresh_tokens (employee_id, token, expires_at)
 		VALUES ($1, $2, $3)
-		`, userID, token, exp)
-
+	`, userID, token, exp)
 	return err
 }
 
-func (r *Repository) ValidateRefreshToken(token string) (int, error) {
+// ValidateRefreshToken — return 4 nilai: userID, role, branchID, error
+func (r *Repository) ValidateRefreshToken(token string) (int, string, int, error) {
 	var userID int
+	var role string
+	var branchID int
 
 	err := r.DB.QueryRow(`
-		SELECT employee_id
-		FROM refresh_tokens
-		WHERE token = $1 AND expires_at > NOW()
-		`, token).Scan(&userID)
+		SELECT rt.employee_id, e.role, COALESCE(e.branch_id, 0)
+		FROM refresh_tokens rt
+		JOIN employees e ON e.id = rt.employee_id
+		WHERE rt.token = $1 AND rt.expires_at > NOW()
+	`, token).Scan(&userID, &role, &branchID)
 
-	return userID, err
+	return userID, role, branchID, err
 }
 
 func (r *Repository) DeleteRefreshToken(token string) {
 	r.DB.Exec(`DELETE FROM refresh_tokens WHERE token = $1`, token)
 }
 
-func (r *Repository) CreateUser(username, password, role, tipe string) error {
+func (r *Repository) CreateUser(username, password, name, role, tipe string) error {
 	_, err := r.DB.Exec(`
-		INSERT INTO employees (username, password, role, tipe)
-		VALUES ($1, $2, $3, $4)
-		`, username, password, role, tipe)
-
+		INSERT INTO employees (username, password, name, role, tipe)
+		VALUES ($1, $2, $3, $4, $5)
+	`, username, password, name, role, tipe)
 	return err
 }

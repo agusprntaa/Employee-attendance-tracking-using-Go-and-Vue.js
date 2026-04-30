@@ -11,35 +11,55 @@ type Service struct {
 	Repo *Repository
 }
 
-func (s *Service) Login(username, password string) (string, string, error) {
-	id, hashed, role, err := s.Repo.FindUser(username)
+// User struct untuk dikirim ke handler (dan ke frontend)
+type User struct {
+	ID           int
+	Name         string
+	Username     string
+	Role         string
+	EmployeeType string
+	BranchID     int
+}
+
+func (s *Service) Login(username, password string) (string, string, *User, error) {
+	user, hashed, err := s.Repo.FindUser(username)
 	if err != nil {
-		return "", "", errors.New("user not found")
+		return "", "", nil, errors.New("user not found")
 	}
 
-	// compare password
+	// bandingkan password
 	if bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password)) != nil {
-		return "", "", errors.New("wrong password")
+		return "", "", nil, errors.New("wrong password")
 	}
 
 	// generate tokens
-	access, _ := utils.GenerateAccessToken(id, role)
-	refresh, exp, _ := utils.GenerateRefreshToken(id)
+	access, err := utils.GenerateAccessToken(user.ID, user.Role, user.BranchID)
+	if err != nil {
+		return "", "", nil, err
+	}
 
-	// simpan refresh token
-	s.Repo.SaveRefreshToken(id, refresh, exp)
+	refresh, exp, err := utils.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return "", "", nil, err
+	}
 
-	return access, refresh, nil
+	// simpan refresh token ke DB
+	s.Repo.SaveRefreshToken(user.ID, refresh, exp)
+
+	return access, refresh, user, nil
 }
 
 func (s *Service) Refresh(oldToken string) (string, error) {
-	userID, err := s.Repo.ValidateRefreshToken(oldToken)
+	// Sekarang ValidateRefreshToken return 4 nilai — userID, role, branchID, error
+	userID, role, branchID, err := s.Repo.ValidateRefreshToken(oldToken)
 	if err != nil {
 		return "", errors.New("invalid refresh token")
 	}
-
-	// ⚠️ NOTE: ini masih hardcode
-	newAccess, _ := utils.GenerateAccessToken(userID, "karyawan")
+	// Generate token baru dengan role + branchID yang benar dari DB
+	newAccess, err := utils.GenerateAccessToken(userID, role, branchID)
+	if err != nil {
+		return "", err
+	}
 
 	return newAccess, nil
 }
@@ -48,11 +68,10 @@ func (s *Service) Logout(refreshToken string) {
 	s.Repo.DeleteRefreshToken(refreshToken)
 }
 
-func (s *Service) CreateUser(username, password, role, tipe string) error {
+func (s *Service) CreateUser(username, password, name, role, tipe string) error {
 	hashed, err := utils.HashPassword(password)
 	if err != nil {
 		return err
 	}
-
-	return s.Repo.CreateUser(username, hashed, role, tipe)
+	return s.Repo.CreateUser(username, hashed, name, role, tipe)
 }

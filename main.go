@@ -8,47 +8,60 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
+	"absensi_karyawan/attendance"
 	"absensi_karyawan/auth"
 	"absensi_karyawan/database"
+	// "absensi_karyawan/employee"  ← comment dulu
+	// "absensi_karyawan/qr"        ← comment dulu
 )
 
 func main() {
 	app := fiber.New()
-
-	// middleware global
 	app.Use(cors.New())
 
-	// koneksi DB
 	db := database.ConnectDB()
 
-	// inject dependency
-	repo := &auth.Repository{DB: db}
-	service := &auth.Service{Repo: repo}
-	handler := &auth.Handler{Service: service}
+	// Auth
+	authRepo := &auth.Repository{DB: db}
+	authService := &auth.Service{Repo: authRepo}
+	authHandler := &auth.Handler{Service: authService}
 
-	// rate limit khusus login
-	loginlimiter := limiter.New(limiter.Config{
+	// Attendance
+	attendanceRepo := &attendance.Repository{DB: db}
+	attendanceService := &attendance.Service{Repo: attendanceRepo}
+	attendanceHandler := &attendance.Handler{Service: attendanceService}
+
+	// Employee — comment dulu sampai siap
+	// employeeRepo    := &employee.Repository{DB: db}
+	// employeeHandler := &employee.Handler{Repo: employeeRepo}
+
+	loginLimiter := limiter.New(limiter.Config{
 		Max:        15,
 		Expiration: 15 * time.Minute,
 	})
 
-	// routes auth
-	app.Post("/login", loginlimiter, handler.Login)
-	app.Post("/refresh", handler.Refresh)
-	app.Post("/logout", handler.Logout)
-	app.Post("/admin/create-user",
-		auth.AuthMiddleware,
-		auth.AdminOnly,
-		handler.CreateUser,
-	)
+	// Public routes
+	app.Post("/login", loginLimiter, authHandler.Login)
+	app.Post("/refresh", authHandler.Refresh)
+	app.Post("/logout", authHandler.Logout)
 
-	// protected route contoh
-	app.Get("/profile", auth.AuthMiddleware, func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"user_id": c.Locals("user_id"),
-			"role":    c.Locals("role"),
-		})
-	})
+	// Protected routes
+	api := app.Group("/", auth.AuthMiddleware)
+
+	api.Post("/admin/create-user", auth.AdminOnly, authHandler.CreateUser)
+
+	// Attendance routes — ini yang mau ditest
+	api.Post("/attendance/checkin", attendanceHandler.CheckIn)
+	api.Patch("/attendance/checkout", attendanceHandler.CheckOut)
+	api.Get("/attendance/today", attendanceHandler.GetToday)
+	api.Get("/attendance/history", attendanceHandler.GetHistory)
+
+	// Employee routes — comment dulu
+	// api.Get("/employee/profile",           employeeHandler.GetProfile)
+	// api.Patch("/employee/change-password", employeeHandler.ChangePassword)
+
+	// QR routes — comment dulu
+	// api.Get("/qr/today", auth.AdminOnly, qrHandler.GetTodayToken)
 
 	log.Println("Server running on http://localhost:3000")
 	log.Fatal(app.Listen(":3000"))
