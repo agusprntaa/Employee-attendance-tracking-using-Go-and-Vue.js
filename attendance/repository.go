@@ -153,20 +153,31 @@ func (r *Repository) UpdateCheckOut(employeeID int, checkOut time.Time, status s
 }
 
 // GetAttendanceHistory ambil riwayat absensi karyawan (untuk halaman riwayat)
-func (r *Repository) GetAttendanceHistory(employeeID, limit, offset int) ([]*AttendanceRecord,
-	error) {
+func (r *Repository) GetAttendanceHistory(employeeID, limit, offset int) ([]*AttendanceRecord, int, error) {
+	// Query 1: hitung total record milik karyawan ini
+	var total int
+	err := r.DB.QueryRow(`
+		SELECT COUNT(*) FROM attendance WHERE employee_id = $1
+	`, employeeID).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Query 2: ambil data sesuai halaman
 	rows, err := r.DB.Query(`
-	SELECT id, employee_id, branch_id, date, work_type, status,
-		check_in, check_out, late_minutes, wfa_reason,
+	SELECT 
+		id, employee_id, branch_id, date,
+		work_type, status,
+		check_in, check_out, 
+		late_minutes, wfa_reason,
 		early_leave_reason, is_auto_checkout
 	FROM attendance
 	WHERE employee_id = $1
 	ORDER BY date DESC
 	LIMIT $2 OFFSET $3
 	`, employeeID, limit, offset)
-
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -180,9 +191,9 @@ func (r *Repository) GetAttendanceHistory(employeeID, limit, offset int) ([]*Att
 			&a.LateMinutes, &a.WFAReason,
 			&a.EarlyLeaveReason, &a.IsAutoCheckout,
 		); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		records = append(records, &a)
 	}
-	return records, nil
+	return records, total, nil
 }

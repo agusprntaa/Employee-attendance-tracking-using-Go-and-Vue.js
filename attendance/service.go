@@ -61,24 +61,35 @@ func (s *Service) checkInWFO(employeeID int, req CheckInRequest) (*AttendanceRec
 	// ── Step 3: Cek cutoff time ─────────────────────────────────────
 	// Cutoff = work_start + checkin_cutoff_min
 	// Contoh: work_start 08:00, cutoff 120 menit → batas check-in 10:00
-	now := time.Now().UTC()
-	todayWorkStart := time.Date(now.Year(), now.Month(), now.Day(),
-		detail.WorkStart.Hour(), detail.WorkStart.Minute(), 0, 0, time.UTC)
-	cutoffTime := todayWorkStart.Add(time.Duration(detail.CutoffMin) * time.Minute)
-
+	now := utils.ServerTime()
+	todayWorkStart := timeOfDay(now, detail.WorkStart)
+	cutoffTime := todayWorkStart.Add(minutesDuration(detail.CutoffMin))
 	if now.After(cutoffTime) {
 		return nil, ErrCutoffExceeded
 	}
 
 	// ── Step 4: Validasi akurasi GPS ────────────────────────────────
+	// utils.ValidateLocation hitung jarak dari koordinat yg dikirim FE
 	// > 200m = tolak keras
 	// 50-200m = bisa lanjut tapi frontend tampilkan warning
-	if req.Accuracy > 200 {
-		return nil, ErrGPSAccuracyLow
+	locStatus, err := utils.ValidateLocation(
+		req.Lat, req.Lon, // dari FE
+		detail.BranchLat, detail.BranchLon, // dari DB
+		detail.RadiusMeter, // dari DB
+		req.Accuracy,       // dari device
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !locStatus.IsValid {
+		if req.Accuracy > 200 {
+			return nil, ErrGPSAccuracyLow
+		}
+		return nil, ErrOutOfRadius
 	}
 
 	// ── Step 5: Validasi HMAC QR token ─────────────────────────────
-	today := now.Format("2006-01-02")
+	today := utils.TodayDate()
 	if !utils.ValidateQRToken(req.QRToken, req.BranchID, today) {
 		return nil, ErrQRInvalid
 	}
@@ -88,17 +99,10 @@ func (s *Service) checkInWFO(employeeID int, req CheckInRequest) (*AttendanceRec
 		return nil, ErrBranchMismatch
 	}
 
-	// ── Step 6: Hitung jarak Haversine ──────────────────────────────
-	distance := utils.HaversineDistance(req.Lat, req.Lon, detail.BranchLat, detail.BranchLon)
-	if distance > float64(detail.RadiusMeter) {
-		return nil, ErrOutOfRadius
-	}
-
-	// ── Step 7: Tentukan status PRESENT atau LATE ───────────────────
-	toleranceTime := todayWorkStart.Add(time.Duration(detail.LateTolMin) * time.Minute)
+	// ── Step 6: Tentukan status PRESENT atau LATE ───────────────────
+	toleranceTime := todayWorkStart.Add(time.Duration(detail.LateTolMin))
 	status := "PRESENT"
 	lateMinutes := 0
-
 	if now.After(toleranceTime) {
 		status = "LATE"
 		lateMinutes = int(now.Sub(todayWorkStart).Minutes())
@@ -106,6 +110,7 @@ func (s *Service) checkInWFO(employeeID int, req CheckInRequest) (*AttendanceRec
 
 	// ── INSERT attendance ───────────────────────────────────────────
 	checkInTime := now
+	distance := locStatus.Distance
 	record := &AttendanceRecord{
 		EmployeeID:    employeeID,
 		BranchID:      detail.BranchID,
@@ -117,7 +122,6 @@ func (s *Service) checkInWFO(employeeID int, req CheckInRequest) (*AttendanceRec
 		DistanceMeter: &distance,
 		LateMinutes:   &lateMinutes,
 	}
-
 	if err := s.Repo.InsertAttendance(record); err != nil {
 		return nil, err
 	}
@@ -141,24 +145,23 @@ func (s *Service) checkInWFA(employeeID int, req CheckInRequest) (*AttendanceRec
 		return nil, ErrWFAReasonTooShort
 	}
 
-	// Step 3: INSERT
-	now := time.Now().UTC()
-	reason := req.WFAReason
-	record := &AttendanceRecord{
-		EmployeeID: employeeID,
-		WorkType:   "WFA",
-		Status:     "WFA",
-		CheckIn:    &now,
-		WFAReason:  &reason,
-	}
-
 	// Ambil branch_id karyawan untuk field branch_id di attendance
 	detail, err := s.Repo.GetEmployeeDetail(employeeID)
 	if err != nil {
 		return nil, err
 	}
-	record.BranchID = detail.BranchID
 
+	// Step 3: INSERT (waktu dari server)
+	now := utils.ServerTime()
+	reason := req.WFAReason
+	record := &AttendanceRecord{
+		EmployeeID: employeeID,
+		BranchID:   detail.BranchID,
+		WorkType:   "WFA",
+		Status:     "WFA",
+		CheckIn:    &now,
+		WFAReason:  &reason,
+	}
 	if err := s.Repo.InsertAttendance(record); err != nil {
 		return nil, err
 	}
@@ -190,9 +193,9 @@ func (s *Service) CheckOut(employeeID int, req CheckOutRequest) (*AttendanceReco
 		return nil, err
 	}
 
-	now := time.Now().UTC()
-	todayWorkEnd := time.Date(now.Year(), now.Month(), now.Day(),
-		detail.WorkEnd.Hour(), detail.WorkEnd.Minute(), 0, 0, time.UTC)
+	// waktu dari server
+	now := utils.ServerTime()
+	todayWorkEnd := timeOfDay(now, detail.WorkEnd)
 
 	status := record.Status // tetap PRESENT / LATE / WFA
 	var earlyReason *string
@@ -246,22 +249,37 @@ func (s *Service) GetToday(employeeID int) (*TodayResponse, error) {
 // ─────────────────────────────────────────
 // GetHistory — riwayat absensi (dengan pagination)
 // ─────────────────────────────────────────
-func (s *Service) GetHistory(employeeID, page, limit int) ([]*AttendanceResponse, error) {
-	if limit <= 0 {
+func (s *Service) GetHistory(employeeID, page, limit int) (*HistoryResponse, error) {
+	if limit <= 0 || limit > 50 {
 		limit = 10
+	}
+	if page < 1 {
+		page = 1
 	}
 	offset := (page - 1) * limit
 
-	records, err := s.Repo.GetAttendanceHistory(employeeID, limit, offset)
+	records, total, err := s.Repo.GetAttendanceHistory(employeeID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*AttendanceResponse
+	var data []*AttendanceResponse
 	for _, r := range records {
-		result = append(result, recordToResponse(r))
+		data = append(data, recordToResponse(r))
 	}
-	return result, nil
+
+	totalPages := total / limit
+	if total%limit != 0 {
+		totalPages++
+	}
+
+	return &HistoryResponse{
+		Data:       data,
+		Total:      total,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+	}, nil
 }
 
 // ─────────────────────────────────────────
@@ -295,16 +313,13 @@ func recordToResponse(a *AttendanceRecord) *AttendanceResponse {
 // isWorkDay cek apakah hari ini adalah hari kerja divisi ini
 // Dipakai oleh cron job
 func isWorkDay(workDays string) bool {
-	today := time.Now()
-	dayNum := int(today.Weekday()) // Go: 0=Minggu, 1=Senin...6=Sabtu
-	// Konversi ke format BRD: 1=Senin, 7=Minggu
+	today := utils.ServerTime()
+	dayNum := int(today.Weekday())
 	if dayNum == 0 {
 		dayNum = 7
 	}
 	todayStr := strconv.Itoa(dayNum)
-
-	days := strings.Split(workDays, ",")
-	for _, d := range days {
+	for _, d := range strings.Split(workDays, ",") {
 		if strings.TrimSpace(d) == todayStr {
 			return true
 		}

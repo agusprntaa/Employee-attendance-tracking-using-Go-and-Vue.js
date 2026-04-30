@@ -128,7 +128,7 @@ func (h *Handler) GetHistory(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 
-	records, err := h.Service.GetHistory(employeeID, page, limit)
+	result, err := h.Service.GetHistory(employeeID, page, limit)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
@@ -138,6 +138,6 @@ func (h *Handler) GetHistory(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "success",
-		"data":   records,
+		"data":   result,
 	})
 }

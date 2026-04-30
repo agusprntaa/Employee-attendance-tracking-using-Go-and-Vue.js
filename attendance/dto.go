@@ -31,7 +31,7 @@ type ChangePasswordRequest struct {
 }
 
 // ────────────────────────────────────────────
-// RESPONSE structs (dari backend ke frontend)
+// RESPONSE structs KARYAWAN (dari backend ke frontend)
 // ────────────────────────────────────────────
 
 // AttendanceResponse data absensi satu record
@@ -66,4 +66,12 @@ type ProfileResponse struct {
 	Tipe         string `json:"tipe"`
 	DivisionName string `json:"division_name"`
 	BranchName   string `json:"branch_name"`
+}
+
+type HistoryResponse struct {
+	Data       []*AttendanceResponse `json:"data"`
+	Total      int                   `json:"total"`
+	Page       int                   `json:"page"`
+	Limit      int                   `json:"limit"`
+	TotalPages int                   `json:"total_pages"`
 }
