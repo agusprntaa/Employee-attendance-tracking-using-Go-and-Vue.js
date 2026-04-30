@@ -9,24 +9,31 @@ const routes = [
         component: Login
     },
 
-  // ADMIN
+  // ADMIN PUSAT
     {
         path: '/admin-pusat/dashboard',
         name: 'AdminPusatDashboard',
         component: () => import('../views/admin-pusat/Dashboard.vue')
     },
 
+  //ADMIN CABANG
     {
         path: '/admin-cabang/dashboard',
         name: 'AdminCabangDashboard',
         component: () => import('../views/admin-cabang/Dashboard.vue')
     },
 
+    {
+      path: '/admin-cabang/employees',
+      name: 'AdminCabangEmployees',
+      component: () => import('../views/admin-cabang/Employees.vue')
+    },
+
   // EMPLOYEE
     {
-        path: '/employee/dashboard',
-        name: 'EmployeeDashboard',
-        component: () => import('../views/employee/Dashboard.vue')
+      path: '/admin-cabang/employees',
+      name: 'AdminCabangEmployees',
+      component: () => import('../views/admin-cabang/Employees.vue')
     },
 
     { 

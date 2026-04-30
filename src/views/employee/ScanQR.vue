@@ -7,12 +7,10 @@ import { checkInAPI } from '@/services/attendance'
 
 const router = useRouter()
 
-// STATE
 const loading = ref(false)
 const error = ref('')
 const scanned = ref(false)
 
-// GEO
 const {
   latitude,
   longitude,
@@ -23,7 +21,6 @@ const {
 let codeReader = null
 let videoElement = null
 
-// INIT
 onMounted(async () => {
   videoElement = document.getElementById('video')
 
