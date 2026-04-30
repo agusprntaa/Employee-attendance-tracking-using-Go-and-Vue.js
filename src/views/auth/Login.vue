@@ -2,10 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { loginAPI } from '../../services/auth'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
+const { setUser } = useAuth()
 
-// STATE
 const username = ref('')
 const password = ref('')
 const remember = ref(false)
@@ -20,62 +21,16 @@ const errorGlobal = ref('')
 
 // INIT
 onMounted(() => {
-  // Auto-isi email jika remember diaktifkan sebelumnya
   const isRemember = localStorage.getItem('remember')
   const savedUsername = localStorage.getItem('savedUsername')
+
   if (isRemember === 'true' && savedUsername) {
     username.value = savedUsername
     remember.value = true
   }
-
-  // Auto-login jika token & user masih ada
-  const token = localStorage.getItem('token')
-  const userRaw = localStorage.getItem('user')
-  if (token && userRaw) {
-    const user = JSON.parse(userRaw)
-    redirectByRole(user)
-  }
 })
 
-// REDIRECT berdasarkan role & tipe
-// role dari backend: "super_admin" / "admin_cabang" / "karyawan"
-// tipe dari backend: "pusat" / "cabang"
-function redirectByRole(user) {
-  const { role } = user
-
-  if (role === 'super_admin') {
-    return router.push('/admin-pusat/dashboard')
-  }
-
-  if (role === 'admin_cabang') {
-    return router.push('/admin-cabang/dashboard')
-  }
-
-  if (role === 'karyawan') {
-    return router.push('/employee/dashboard')
-  }
-
-  console.error('Role tidak dikenali:', role)
-}
-
-// MINTA IZIN LOKASI
-function requestLocation() {
-  locationError.value = ''
-  navigator.geolocation.getCurrentPosition(
-    () => {
-      locationGranted.value = true
-      locationError.value = ''
-    },
-    (err) => {
-      if (err.code === 1) locationError.value = 'Izin lokasi ditolak'
-      else if (err.code === 2) locationError.value = 'Lokasi tidak tersedia'
-      else if (err.code === 3) locationError.value = 'Request lokasi timeout'
-    },
-    { timeout: 5000 }
-  )
-}
-
-// VALIDASI FORM
+// VALIDASI
 function validate() {
   let valid = true
   errorUsername.value = ''
@@ -104,23 +59,6 @@ function validate() {
 async function login() {
   if (loading.value) return
 
-  // Minta izin lokasi dulu jika belum
-  if (!locationGranted.value) {
-    await new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        () => {
-          locationGranted.value = true
-          locationError.value = ''
-          resolve()
-        },
-        () => {
-          locationError.value = 'Izin lokasi diperlukan'
-          resolve()
-        }
-      )
-    })
-  }
-
   if (!validate()) return
 
   loading.value = true
@@ -132,15 +70,16 @@ async function login() {
       password: password.value.trim()
     })
 
-    // Response dari backend sekarang: { status, data: { token, refresh_token, user } }
     const { token, refresh_token, user } = res.data.data
 
-    // Simpan ke localStorage
     localStorage.setItem('token', token)
     localStorage.setItem('refresh_token', refresh_token)
-    localStorage.setItem('user', JSON.stringify(user))
 
-    // Remember username
+    setUser(user)
+
+    router.push('/')
+
+    // remember
     if (remember.value) {
       localStorage.setItem('remember', 'true')
       localStorage.setItem('savedUsername', username.value)
@@ -149,15 +88,11 @@ async function login() {
       localStorage.removeItem('savedUsername')
     }
 
-    redirectByRole(user)
-
   } catch (err) {
-    console.error('Login error:', err)
-    // Ambil pesan error dari response backend
     errorGlobal.value =
       err.response?.data?.message ||
       err.response?.data?.error ||
-      'Login gagal, coba lagi'
+      'Login gagal'
   } finally {
     loading.value = false
   }
@@ -169,7 +104,6 @@ async function login() {
     <div class="card">
       <h2>ABSENSI KARYAWAN</h2>
 
-      <!-- Tombol izin lokasi -->
       <div
         class="location-box"
         :class="{ active: locationGranted }"
@@ -181,7 +115,6 @@ async function login() {
       </div>
       <p v-if="locationError" class="error">{{ locationError }}</p>
 
-      <!-- Input username -->
       <label>Username</label>
       <input
         v-model="username"
@@ -191,7 +124,6 @@ async function login() {
       />
       <p v-if="errorUsername" class="error">{{ errorUsername }}</p>
 
-      <!-- Input password -->
       <label>Password</label>
       <input
         type="password"
@@ -201,13 +133,11 @@ async function login() {
       />
       <p v-if="errorPassword" class="error">{{ errorPassword }}</p>
 
-      <!-- Remember me -->
       <label class="remember">
         <input type="checkbox" v-model="remember" />
         <span>Ingat saya</span>
       </label>
 
-      <!-- Tombol login -->
       <button @click="login" :disabled="loading">
         {{ loading ? 'Loading...' : 'Sign In' }}
       </button>

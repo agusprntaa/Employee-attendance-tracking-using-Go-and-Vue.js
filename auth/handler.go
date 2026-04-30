@@ -28,7 +28,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	}
 
 	// Kembalikan token + data user sekaligus
-	// Frontend butuh role & tipe untuk redirect ke halaman yang benar
+	// Frontend butuh role & tipe untuk redirect ke halaman yang sangat benar
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
