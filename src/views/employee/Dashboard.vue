@@ -73,7 +73,7 @@ async function fetchToday() {
 // HISTORY
 async function fetchHistory() {
   try {
-    const res = await getAttendanceHistory()
+    const res = await getAttendanceHistory(1, 10)
     history.value = res.data.data || []
   } catch (err) {
     console.error('HISTORY ERROR:', err)

@@ -18,9 +18,9 @@ const routes = [
 
   //ADMIN CABANG
     {
-        path: '/admin-cabang/dashboard',
-        name: 'AdminCabangDashboard',
-        component: () => import('../views/admin-cabang/Dashboard.vue')
+        path: '/employee/dashboard',
+        name: 'EmployeeDashboard',
+        component: () => import('../views/employee/Dashboard.vue')
     },
 
     {
@@ -71,7 +71,7 @@ const router = createRouter({
     routes
 })
 
-/*router.beforeEach((to, from, next) => {
+router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
 
   let user = null
@@ -120,6 +120,6 @@ const router = createRouter({
   }
 
   next()
-})*/
+})
 
 export default router

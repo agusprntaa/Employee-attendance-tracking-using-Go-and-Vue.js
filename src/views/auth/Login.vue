@@ -30,6 +30,38 @@ onMounted(() => {
   }
 })
 
+function requestLocation() {
+  locationError.value = ''
+
+  if (!navigator.geolocation) {
+    locationError.value = 'Browser tidak mendukung lokasi'
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      locationGranted.value = true
+      locationError.value = ''
+      console.log('Lokasi:', pos.coords)
+    },
+    (err) => {
+      locationGranted.value = false
+
+      if (err.code === 1) {
+        locationError.value = 'Izin lokasi ditolak'
+      } else if (err.code === 2) {
+        locationError.value = 'Lokasi tidak tersedia'
+      } else {
+        locationError.value = 'Gagal mengambil lokasi'
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 7000
+    }
+  )
+}
+
 // VALIDASI
 function validate() {
   let valid = true
@@ -76,8 +108,6 @@ async function login() {
     localStorage.setItem('refresh_token', refresh_token)
 
     setUser(user)
-
-    router.push('/')
 
     // remember
     if (remember.value) {

@@ -11,25 +11,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/login': {
+      '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true
-      },
-      '/refresh': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
-      },
-      '/logout': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
-      },
-      //'/admin': {
-        //target: 'http://localhost:3000',
-        //changeOrigin: true
-      //},
-      '/profile': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
   }

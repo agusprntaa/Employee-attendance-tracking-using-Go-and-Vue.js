@@ -38,6 +38,16 @@ func main() {
 	loginLimiter := limiter.New(limiter.Config{
 		Max:        15,
 		Expiration: 15 * time.Minute,
+
+		LimitReached: func(c *fiber.Ctx) error {
+			retry := c.GetRespHeader("Retry-After")
+
+			return c.Status(429).JSON(fiber.Map{
+				"error":       "Terlalu banyak request",
+				"retry_after": retry, // dalam detik
+				"message":     "Coba lagi dalam " + retry + " detik",
+			})
+		},
 	})
 
 	// Public routes
