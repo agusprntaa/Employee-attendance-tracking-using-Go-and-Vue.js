@@ -79,7 +79,6 @@ router.beforeEach((to, from, next) => {
     user = JSON.parse(localStorage.getItem('user'))
   } catch {}
 
-  if (to.path === '/') {
     if (token && user) {
       const target =
         user.role === 'super_admin'
@@ -92,8 +91,6 @@ router.beforeEach((to, from, next) => {
       if (to.path !== target) {
         return next(target)
       }
-    }
-    return next()
   }
 
   // BELUM LOGIN

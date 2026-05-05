@@ -11,6 +11,7 @@ import (
 	"absensi_karyawan/attendance"
 	"absensi_karyawan/auth"
 	"absensi_karyawan/database"
+	"absensi_karyawan/employee"
 	// "absensi_karyawan/employee"  ← comment dulu
 	// "absensi_karyawan/qr"        ← comment dulu
 )
@@ -32,8 +33,8 @@ func main() {
 	attendanceHandler := &attendance.Handler{Service: attendanceService}
 
 	// Employee — comment dulu sampai siap
-	// employeeRepo    := &employee.Repository{DB: db}
-	// employeeHandler := &employee.Handler{Repo: employeeRepo}
+	employeeRepo := &employee.Repository{DB: db}
+	employeeHandler := &employee.Handler{Repo: employeeRepo}
 
 	loginLimiter := limiter.New(limiter.Config{
 		Max:        15,
@@ -59,6 +60,12 @@ func main() {
 	api := app.Group("/", auth.AuthMiddleware)
 
 	api.Post("/admin/create-user", auth.AdminOnly, authHandler.CreateUser)
+
+	// ── Employee (karyawan sendiri) ───────────────────
+	// GET  /employee/profile         → profil sendiri
+	// PATCH /employee/change-password → ubah password
+	api.Get("/employee/profile", employeeHandler.GetProfile)
+	api.Patch("/employee/change-password", employeeHandler.ChangePassword)
 
 	// Attendance routes — ini yang mau ditest
 	api.Post("/attendance/checkin", attendanceHandler.CheckIn)
