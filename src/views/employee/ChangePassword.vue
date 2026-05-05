@@ -12,6 +12,15 @@ const confirmPassword = ref('')
 const error = ref('')
 const loading = ref(false)
 
+// toggle password
+const showOld = ref(false)
+const showNew = ref(false)
+const showConfirm = ref(false)
+
+// toast
+const successMessage = ref('')
+const showToast = ref(false)
+
 async function handleSubmit() {
   if (loading.value) return
 
@@ -43,8 +52,13 @@ async function handleSubmit() {
       new_password: newPass
     })
 
-    alert('Password berhasil diubah')
-    router.back()
+    successMessage.value = 'Password berhasil diubah'
+    showToast.value = true
+
+    setTimeout(() => {
+      showToast.value = false
+      router.back()
+    }, 1500)
 
   } catch (err) {
     error.value =
@@ -74,17 +88,38 @@ function goBack() {
 
         <div class="field">
           <label>Password lama</label>
-          <input type="password" v-model="oldPassword" />
+          <div class="password-wrapper">
+            <input :type="showOld ? 'text' : 'password'" v-model="oldPassword" />
+            <img
+              :src="showOld ? '/eye-hide.png' : '/eye-show.png'"
+              class="toggle"
+              @click="showOld = !showOld"
+            />
+          </div>
         </div>
 
         <div class="field">
           <label>Password baru</label>
-          <input type="password" v-model="newPassword" />
+          <div class="password-wrapper">
+            <input :type="showNew ? 'text' : 'password'" v-model="newPassword" />
+            <img
+              :src="showNew ? '/eye-hide.png' : '/eye-show.png'"
+              class="toggle"
+              @click="showNew = !showNew"
+            />
+          </div>
         </div>
 
         <div class="field">
           <label>Konfirmasi password</label>
-          <input type="password" v-model="confirmPassword" />
+          <div class="password-wrapper">
+            <input :type="showConfirm ? 'text' : 'password'" v-model="confirmPassword" />
+            <img
+              :src="showConfirm ? '/eye-hide.png' : '/eye-show.png'"
+              class="toggle"
+              @click="showConfirm = !showConfirm"
+            />
+          </div>
         </div>
 
         <p v-if="error" class="error">{{ error }}</p>
@@ -100,13 +135,17 @@ function goBack() {
       </div>
     </div>
 
+    <div v-if="showToast" class="toast">
+      {{ successMessage }}
+    </div>
+
   </div>
 </template>
 
 <style scoped>
 .wrapper {
   min-height: 100vh;
-  background: #ffffff;
+  background: #f5f7fb;
 }
 
 .header {
@@ -114,11 +153,11 @@ function goBack() {
   background: #4f46e5;
   display: flex;
   align-items: center;
-  padding: 0 30px;
+  padding: 0 20px;
 }
 
 .back {
-  width: 24px;
+  width: 22px;
   cursor: pointer;
 }
 
@@ -133,8 +172,8 @@ function goBack() {
   max-width: 360px;
   background: white;
   padding: 28px 22px;
-  border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  border-radius: 22px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.08);
 }
 
 h2 {
@@ -148,13 +187,18 @@ h2 {
 }
 
 label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
-input {
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
   width: 100%;
   padding: 14px;
+  padding-right: 42px;
   border-radius: 14px;
   border: none;
   margin-top: 6px;
@@ -162,19 +206,47 @@ input {
   outline: none;
 }
 
+.toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.toggle:hover {
+  opacity: 1;
+}
+
 .btn {
   width: 100%;
   padding: 14px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #5b7cfa, #4f46e5);
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
   border: none;
   margin-top: 16px;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.25);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.35);
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .error {
@@ -182,5 +254,31 @@ input {
   font-size: 12px;
   margin-top: 8px;
   text-align: center;
+}
+
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: white;
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 20px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
 </style>

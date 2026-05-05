@@ -37,7 +37,7 @@ function goToChangePassword() {
       </div>
 
       <div class="info">
-        <span class="badge">{{ user.division }}</span>
+        <span class="badge">DIVISI {{ user.division_name }}</span>
         <h3>{{ user.name }}</h3>
         <p>{{ todayDate }}</p>
       </div>
@@ -54,11 +54,17 @@ function goToChangePassword() {
 
 <style scoped>
 .profile-card {
-  background: white;
+  background: #ffffff;
   padding: 20px;
-  border-radius: 20px; 
-  margin-bottom: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  border-radius: 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  transition: all 0.25s ease;
+}
+
+.profile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.08);
 }
 
 .top {
@@ -68,10 +74,10 @@ function goToChangePassword() {
 }
 
 .avatar {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6b8cff, #4f46e5);
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
   display: flex;
   align-items: center;
@@ -79,43 +85,58 @@ function goToChangePassword() {
   font-weight: 600;
   font-size: 18px;
   flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.25);
 }
 
 .info h3 {
   margin: 4px 0;
   font-size: 15px;
   font-weight: 600;
+  color: #111827;
 }
 
 .info p {
   font-size: 12px;
-  color: #6b7280; 
+  color: #6b7280;
 }
 
 .badge {
-  background: #4f46e5;
-  color: white;
+  display: inline-block;
+  background: #eef2ff;
+  color: #4338ca;
   padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .divider {
   border-top: 1px dashed #e5e7eb;
-  margin: 16px 0;
+  margin: 18px 0;
 }
 
 .btn-change {
   width: 100%;
-  padding: 12px;
-  border-radius: 14px; 
-  background: #4f46e5;
+  padding: 13px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
   border: none;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.25);
+}
+
+.btn-change:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(79, 70, 229, 0.35);
+}
+
+.btn-change:active {
+  transform: scale(0.97);
 }
 
 @media (min-width: 1024px) {
@@ -134,7 +155,7 @@ function goToChangePassword() {
   }
 
   .btn-change {
-    padding: 14px;
+    padding: 15px;
   }
 }
 </style>

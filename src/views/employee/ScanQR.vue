@@ -60,7 +60,13 @@ async function startScanner() {
 // STOP SCAN
 function stopScanner() {
   try {
-    codeReader?.reset()
+    if (videoElement && videoElement.srcObject) {
+      const tracks = videoElement.srcObject.getTracks()
+      tracks.forEach(track => track.stop())
+      videoElement.srcObject = null
+    }
+
+    codeReader = null
   } catch (e) {
     console.warn('Scanner stop error', e)
   }
@@ -97,9 +103,15 @@ async function handleScan(decodedText) {
       branch_id: qrData.branch_id
     }
 
-    await checkInAPI(payload)
+    const res = await checkInAPI(payload)
 
-    router.push('/employee/success')
+    router.push({
+      path: '/employee/success',
+      query: {
+        type: 'wfo',
+        time: res.data.data.check_in
+      }
+    })
 
   } catch (err) {
     console.error(err)
@@ -110,14 +122,7 @@ async function handleScan(decodedText) {
       'Check-in gagal'
     )
 
-    router.push({
-        path: '/employee/success',
-        query: {
-            type: 'wfo',
-            time: res.data.data.check_in
-        }
-    })
-
+    scanned.value = false
   } finally {
     loading.value = false
   }

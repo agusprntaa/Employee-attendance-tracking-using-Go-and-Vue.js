@@ -1,20 +1,20 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import AdminProfile from '@/components/AdminProfile.vue'
 import QRCode from 'qrcode.vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
 import {
   getDashboardSummary,
-  getTodayAttendance,
   getQRCode,
   refreshQRCode,
   getBranchSettings
 } from '@/services/adminCabang'
 
-const router = useRouter()
-const route = useRoute()
 const { user, loadUser } = useAuth()
 
 const loading = ref(false)
@@ -25,6 +25,8 @@ const settings = ref({})
 
 const search = ref('')
 const status = ref('')
+const period = ref('daily')
+const date = ref('')
 
 const qrToken = ref('')
 const qrExpire = ref('')
@@ -34,112 +36,172 @@ let interval = null
 onMounted(async () => {
   loadUser()
   await fetchAll()
-
-  interval = setInterval(() => {
-    fetchQR()
-  }, 5 * 60 * 1000)
+  interval = setInterval(fetchQR, 3 * 60 * 1000)
 })
 
-onUnmounted(() => {
-  clearInterval(interval)
-})
+onUnmounted(() => clearInterval(interval))
 
 async function fetchAll() {
-  await Promise.all([
-    fetchSummary(),
-    fetchToday(),
-    fetchQR(),
-    fetchSettings()
-  ])
+  await Promise.all([fetchDashboard(), fetchQR(), fetchSettings()])
 }
 
-// API CALLS
-async function fetchSummary() {
-  try {
-    const res = await getDashboardSummary()
-    summary.value = res.data.data
-  } catch (err) {
-    console.error(err)
-  }
+async function fetchDashboard() {
+  const res = await getDashboardSummary({
+    search: search.value,
+    status: status.value || undefined,
+    type: period.value,
+    date: date.value
+  })
+
+  summary.value = res.data.data.stats
+  employees.value = res.data.data.attendance
 }
 
-async function fetchToday() {
+async function fetchQR() {
+  const res = await getQRCode()
+  qrToken.value = res.data.data.qr_content
+  qrExpire.value = res.data.data.expires_at
+}
+
+async function fetchSettings() {
+  const res = await getBranchSettings()
+  settings.value = res.data.data
+}
+
+async function handleRefreshQR() {
   loading.value = true
   try {
-    const res = await getTodayAttendance({
-      search: search.value,
-      status: status.value || undefined
-    })
-    employees.value = res.data.data
-  } catch (err) {
-    console.error(err)
+    const res = await refreshQRCode()
+    qrToken.value = res.data.data.qr_content
+    qrExpire.value = res.data.data.expires_at
   } finally {
     loading.value = false
   }
 }
 
-async function fetchQR() {
-  try {
-    const res = await getQRCode()
-    qrToken.value = res.data.data.token
-    qrExpire.value = res.data.data.expires_at
-  } catch (err) {
-    console.error(err)
-  }
-}
-
-async function fetchSettings() {
-  try {
-    const res = await getBranchSettings()
-    settings.value = res.data.data
-  } catch (err) {
-    console.error(err)
-  }
-}
-
-async function handleRefreshQR() {
-  try {
-    const res = await refreshQRCode()
-    qrToken.value = res.data.data.token
-    qrExpire.value = res.data.data.expires_at
-  } catch (err) {
-    console.error(err)
-  }
-}
-
 function formatTime(utc) {
   if (!utc) return '-'
-  return new Date(utc).toLocaleTimeString('id-ID')
+  return new Date(utc).toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jakarta'
+  })
+}
+
+function formatDate(utc) {
+  if (!utc) return '-'
+  return new Date(utc).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta'
+  })
+}
+
+function formatExpire(utc) {
+  if (!utc) return '-'
+  return new Date(utc).toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Jakarta'
+  })
+}
+
+function isExpired(utc) {
+  return utc && new Date(utc) < new Date()
+}
+
+function exportExcel() {
+  if (!employees.value.length) {
+    alert('Tidak ada data')
+    return
+  }
+
+  const data = employees.value.map((item) => ({
+    'ID': item.employee_id,
+    'Nama': item.employee_username,
+    'Tanggal': formatDate(item.check_in),
+    'Check In': formatTime(item.check_in),
+    'Status': item.status,
+    'Mode': item.work_type
+  }))
+
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
+
+  XLSX.writeFile(wb, 'attendance.xlsx')
+}
+
+function exportPDF() {
+  if (!employees.value.length) {
+    alert('Tidak ada data')
+    return
+  }
+
+  const doc = new jsPDF()
+
+  doc.setFontSize(16)
+  doc.text('Laporan Absensi', 14, 15)
+
+  doc.setFontSize(10)
+  doc.text(
+    new Date().toLocaleDateString('id-ID'),
+    14,
+    22
+  )
+
+  const rows = employees.value.map((item) => [
+    item.employee_id,
+    item.employee_username,
+    formatDate(item.check_in),
+    formatTime(item.check_in),
+    item.status,
+    item.work_type
+  ])
+
+  autoTable(doc, {
+    startY: 28,
+    head: [['ID', 'Nama', 'Tanggal', 'Check In', 'Status', 'Mode']],
+    body: rows,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [79, 70, 229] }
+  })
+
+  doc.save('attendance.pdf')
 }
 </script>
 
 <template>
 <div class="layout">
-<AdminSidebar></AdminSidebar>
+  <AdminSidebar />
 
   <main class="main">
     <div class="header">
+
       <div>
         <h2>Dashboard</h2>
         <p class="subtitle">
-        {{ settings.branch_name || user?.branch_name || '-' }} —
-        {{ new Date().toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        }) }}
+          {{ settings.branch_information?.branch_name || user?.branch_name || '-' }} —
+          {{ new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          }) }}
         </p>
       </div>
-      
+
       <AdminProfile :user="user" />
-</div>
+    </div>
 
     <div class="stats">
-      <div class="card"><h2>{{ summary.total_employee }}</h2><p>Total Employee</p></div>
-      <div class="card"><h2>{{ summary.present }}</h2><p>Present</p></div>
-      <div class="card"><h2>{{ summary.late }}</h2><p>Late</p></div>
+      <div class="card"><h2>{{ summary.total_employee }}</h2><p>Total</p></div>
+      <div class="card"><h2>{{ summary.present }}</h2><p>Hadir</p></div>
+      <div class="card"><h2>{{ summary.late }}</h2><p>Terlambat</p></div>
       <div class="card"><h2>{{ summary.wfa }}</h2><p>WFA</p></div>
-      <div class="card"><h2>{{ summary.absent }}</h2><p>Absent</p></div>
+      <div class="card"><h2>{{ summary.absent }}</h2><p>Absen</p></div>
     </div>
 
     <div class="panels">
@@ -148,73 +210,97 @@ function formatTime(utc) {
         <div class="panel-header">
           <h3>Today's Attendance</h3>
         </div>
+
         <div class="toolbar">
-          <input v-model="search" placeholder="Search employee..." />
+          <input v-model="search" placeholder="Cari karyawan..." />
+
           <select v-model="status">
-            <option value="">All</option>
+            <option value="">Semua</option>
             <option value="PRESENT">Hadir</option>
             <option value="LATE">Terlambat</option>
             <option value="WFA">WFA</option>
+            <option value="EARLY_LEAVE">Pulang Cepat</option>
             <option value="ABSENT">Absen</option>
           </select>
-          <button @click="fetchToday">Filter</button>
+
+          <select v-model="period">
+            <option value="daily">Harian</option>
+            <option value="weekly">Mingguan</option>
+            <option value="monthly">Bulanan</option>
+            <option value="yearly">Tahunan</option>
+          </select>
+
+          <input type="date" v-model="date" />
+
+          <button @click="fetchDashboard">Filter</button>
         </div>
+
         <table>
           <thead>
             <tr>
-              <th>Employee ID</th>
-              <th>Name</th>
+              <th>ID</th>
+              <th>Nama</th>
               <th>Check In</th>
               <th>Status</th>
               <th>Mode</th>
             </tr>
           </thead>
+
           <tbody>
-            <tr v-for="item in employees" :key="item.employee_id">
+            <tr v-for="item in employees" :key="item.id">
               <td>#{{ item.employee_id }}</td>
-              <td>{{ item.username }}</td>
+              <td>{{ item.employee_username }}</td>
               <td>{{ formatTime(item.check_in) }}</td>
-              <td><span :class="['badge', 'badge-' + item.status]">{{ item.status }}</span></td>
+              <td>
+                <span :class="['badge', 'badge-' + item.status]">
+                  {{ item.status }}
+                </span>
+              </td>
               <td>{{ item.work_type }}</td>
             </tr>
           </tbody>
         </table>
+
+        <div class="export">
+          <div class="export-actions">
+            <button class="btn-export excel" @click="exportExcel">
+              Excel
+            </button>
+            <button class="btn-export pdf" @click="exportPDF">
+              PDF
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
         <div class="panel-header">
-          <h3>Today's QR</h3>
+          <h3>QR Absensi</h3>
         </div>
-        
+
         <div class="qr-body">
           <div class="qr-box">
-            <QRCode
-            v-if="qrToken"
-            :value="qrToken"
-            :size="180"
-            level="H"
-            />
+            <QRCode v-if="qrToken" :value="qrToken" :size="180" level="H" />
             <p v-else class="qr-loading">Memuat QR...</p>
           </div>
 
-          <div class="qr-token" v-if="qrToken">
-            {{ qrToken }}
-          </div>
-
           <div class="qr-expire" v-if="qrExpire">
-            Expired:
-            {{ new Date(qrExpire).toLocaleTimeString('id-ID') }}
+            <span :class="{ expired: isExpired(qrExpire) }">
+              {{ isExpired(qrExpire) ? 'QR Expired' : 'Berlaku sampai:' }}
+              {{ formatExpire(qrExpire) }}
+            </span>
           </div>
 
           <button
             class="btn-refresh"
             @click="handleRefreshQR"
             :disabled="loading"
-            >
+          >
             {{ loading ? 'Refreshing...' : 'Refresh QR' }}
           </button>
         </div>
       </div>
+
     </div>
   </main>
 </div>
@@ -276,6 +362,11 @@ function formatTime(utc) {
   font-weight: 600;
   color: #4f46e5;
   cursor: pointer;
+}
+
+.export-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .stats {
@@ -523,5 +614,69 @@ td .badge {
 .btn-refresh:hover {
   background: #4338ca;
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+}
+
+.qr-expire {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.qr-expire .expired {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.export {
+  padding: 18px 22px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: right;
+}
+
+.btn-export {
+  margin-top: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #4f46e5;
+  background: transparent;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.2px;
+}
+
+.btn-export:hover {
+  background: #4f46e5;
+  color: white;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+}
+
+.btn-export:active {
+  transform: scale(0.96);
+}
+
+.btn-export.excel {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.btn-export.excel:hover {
+  background: #16a34a;
+  color: white;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+
+.btn-export.pdf {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.btn-export.pdf:hover {
+  background: #dc2626;
+  color: white;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
 }
 </style>

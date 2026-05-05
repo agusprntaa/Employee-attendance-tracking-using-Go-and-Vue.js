@@ -1,34 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { loginAPI } from '../../services/auth'
-import { useAuth } from '@/composables/useAuth'
+import { loginAPI } from '@/services/auth'
 
 const router = useRouter()
-const { setUser } = useAuth()
 
 const username = ref('')
 const password = ref('')
-const remember = ref(false)
 const loading = ref(false)
-
-const locationGranted = ref(false)
-const locationError = ref('')
-
 const errorUsername = ref('')
 const errorPassword = ref('')
+const remember = ref(false)
 const errorGlobal = ref('')
-
-// INIT
-onMounted(() => {
-  const isRemember = localStorage.getItem('remember')
-  const savedUsername = localStorage.getItem('savedUsername')
-
-  if (isRemember === 'true' && savedUsername) {
-    username.value = savedUsername
-    remember.value = true
-  }
-})
+const showPassword = ref(false)
+const locationGranted = ref(false)
+const locationError = ref('')
 
 function requestLocation() {
   locationError.value = ''
@@ -62,36 +48,8 @@ function requestLocation() {
   )
 }
 
-// VALIDASI
-function validate() {
-  let valid = true
-  errorUsername.value = ''
-  errorPassword.value = ''
-  errorGlobal.value = ''
-
-  if (!username.value.trim()) {
-    errorUsername.value = 'Masukkan username'
-    valid = false
-  }
-
-  if (!password.value.trim()) {
-    errorPassword.value = 'Masukkan password'
-    valid = false
-  }
-
-  if (!locationGranted.value) {
-    locationError.value = 'Izin lokasi diperlukan'
-    valid = false
-  }
-
-  return valid
-}
-
-// LOGIN
 async function login() {
   if (loading.value) return
-
-  if (!validate()) return
 
   loading.value = true
   errorGlobal.value = ''
@@ -106,23 +64,22 @@ async function login() {
 
     localStorage.setItem('token', token)
     localStorage.setItem('refresh_token', refresh_token)
+    localStorage.setItem('user', JSON.stringify(user))
 
-    setUser(user)
-
-    // remember
-    if (remember.value) {
-      localStorage.setItem('remember', 'true')
-      localStorage.setItem('savedUsername', username.value)
+    if (user.role === 'super_admin') {
+      router.push('/admin-pusat/dashboard')
+    } else if (user.role === 'admin_cabang') {
+      router.push('/admin-cabang/dashboard')
     } else {
-      localStorage.removeItem('remember')
-      localStorage.removeItem('savedUsername')
+      router.push('/employee/dashboard')
     }
 
   } catch (err) {
+    console.error(err)
+
     errorGlobal.value =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      'Login gagal'
+      err.response?.data?.message || 'Login gagal'
+
   } finally {
     loading.value = false
   }
@@ -154,14 +111,20 @@ async function login() {
       />
       <p v-if="errorUsername" class="error">{{ errorUsername }}</p>
 
-      <label>Password</label>
-      <input
-        type="password"
-        v-model="password"
-        placeholder="Masukkan password"
-        @keyup.enter="login"
-      />
-      <p v-if="errorPassword" class="error">{{ errorPassword }}</p>
+      <div class="password-wrapper">
+        <input
+          :type="showPassword ? 'text' : 'password'"
+          v-model="password"
+          placeholder="Masukkan password"
+          @keyup.enter="login"
+        />
+
+        <img
+          :src="showPassword ? '/eye-hide.png' : '/eye-show.png'"
+          class="toggle"
+          @click="showPassword = !showPassword"
+        />
+      </div>
 
       <label class="remember">
         <input type="checkbox" v-model="remember" />
@@ -286,5 +249,30 @@ button:disabled {
 .global-error {
   text-align: center;
   margin-top: 12px;
+}
+
+.password-wrapper {
+  position: relative;
+  margin-top: 12px;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.toggle:hover {
+  opacity: 1;
 }
 </style>

@@ -3,75 +3,75 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/auth/Login.vue'
 
 const routes = [
-    {
-        path: '/',
-        name: 'Login',
-        component: Login
-    },
+  {
+    path: '/',
+    name: 'Login',
+    component: Login
+  },
 
   // ADMIN PUSAT
-    {
-        path: '/admin-pusat/dashboard',
-        name: 'AdminPusatDashboard',
-        component: () => import('../views/admin-pusat/Dashboard.vue')
-    },
+  {
+    path: '/admin-pusat/dashboard',
+    name: 'AdminPusatDashboard',
+    component: () => import('../views/admin-pusat/Dashboard.vue')
+  },
 
-  //ADMIN CABANG
-    {
-        path: '/employee/dashboard',
-        name: 'EmployeeDashboard',
-        component: () => import('../views/employee/Dashboard.vue')
-    },
+  // ADMIN CABANG
+  {
+    path: '/admin-cabang/dashboard',
+    name: 'AdminCabangDashboard',
+    component: () => import('../views/admin-cabang/Dashboard.vue')
+  },
 
-    {
-      path: '/admin-cabang/employees',
-      name: 'AdminCabangEmployees',
-      component: () => import('../views/admin-cabang/Employees.vue')
-    },
+  {
+    path: '/admin-cabang/employees',
+    name: 'AdminCabangEmployees',
+    component: () => import('../views/admin-cabang/Employees.vue')
+  },
 
   // EMPLOYEE
-    {
-      path: '/admin-cabang/employees',
-      name: 'AdminCabangEmployees',
-      component: () => import('../views/admin-cabang/Employees.vue')
-    },
+  {
+    path: '/employee/dashboard',
+    name: 'EmployeeDashboard',
+    component: () => import('../views/employee/Dashboard.vue')
+  },
 
-    { 
-        path: '/employee/change-password',
-        name: 'ChangePassword',
-        component: () => import('../views/employee/ChangePassword.vue')
-    },
+  {
+    path: '/employee/change-password',
+    name: 'ChangePassword',
+    component: () => import('../views/employee/ChangePassword.vue')
+  },
 
-    {
-        path: '/employee/wfa',
-        name: 'WFA',
-        component: () => import('../views/employee/WFA.vue')
-    },
+  {
+    path: '/employee/wfa',
+    name: 'WFA',
+    component: () => import('../views/employee/WFA.vue')
+  },
 
-    {
-        path: '/employee/scan',
-        name: 'ScanQR',
-        component: () => import('../views/employee/ScanQR.vue')
-    },
+  {
+    path: '/employee/scan',
+    name: 'ScanQR',
+    component: () => import('../views/employee/ScanQR.vue')
+  },
 
-    {
-        path: '/employee/success',
-        name: 'Success',
-        component: () => import('../views/employee/Success.vue')
-    },
+  {
+    path: '/employee/success',
+    name: 'Success',
+    component: () => import('../views/employee/Success.vue')
+  },
 
-    {
-        path: '/:pathMatch(.*)*',
-        redirect: '/'
-    }
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
-    routes
+  history: createWebHistory(),
+  routes
 })
 
-router.beforeEach((to, from, next) => {
+/*router.beforeEach((to) => {
   const token = localStorage.getItem('token')
 
   let user = null
@@ -81,45 +81,32 @@ router.beforeEach((to, from, next) => {
 
   if (to.path === '/') {
     if (token && user) {
-      const target =
-        user.role === 'super_admin'
-          ? '/admin-pusat/dashboard'
-          : user.role === 'admin_cabang'
-          ? '/admin-cabang/dashboard'
-          : '/employee/dashboard'
-
-      // NO LOOP
-      if (to.path !== target) {
-        return next(target)
-      }
+      if (user.role === 'super_admin') return '/admin-pusat/dashboard'
+      if (user.role === 'admin_cabang') return '/admin-cabang/dashboard'
+      return '/employee/dashboard'
     }
-    return next()
+    return true
   }
 
-  // BELUM LOGIN
   if (!token) {
-    if (to.path !== '/') {
-      return next('/')
-    }
-    return next()
+    return '/'
   }
 
-  // CEK ROLE
   if (user) {
     if (to.path.startsWith('/admin-pusat') && user.role !== 'super_admin') {
-      return next('/')
+      return '/'
     }
 
     if (to.path.startsWith('/admin-cabang') && user.role !== 'admin_cabang') {
-      return next('/')
+      return '/'
     }
 
     if (to.path.startsWith('/employee') && user.role !== 'karyawan') {
-      return next('/')
+      return '/'
     }
   }
 
-  next()
-})
+  return true
+})*/
 
 export default router
