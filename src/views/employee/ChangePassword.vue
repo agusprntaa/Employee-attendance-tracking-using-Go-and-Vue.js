@@ -1,95 +1,93 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import API from '@/services/api'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import API from "@/services/api";
 
-const router = useRouter()
+const router = useRouter();
 
-const oldPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
+const oldPassword = ref("");
+const newPassword = ref("");
+const confirmPassword = ref("");
 
-const error = ref('')
-const loading = ref(false)
+const error = ref("");
+const loading = ref(false);
 
 // toggle password
-const showOld = ref(false)
-const showNew = ref(false)
-const showConfirm = ref(false)
+const showOld = ref(false);
+const showNew = ref(false);
+const showConfirm = ref(false);
 
 // toast
-const successMessage = ref('')
-const showToast = ref(false)
+const successMessage = ref("");
+const showToast = ref(false);
 
 async function handleSubmit() {
-  if (loading.value) return
+  if (loading.value) return;
 
-  const oldPass = oldPassword.value.trim()
-  const newPass = newPassword.value.trim()
-  const confirmPass = confirmPassword.value.trim()
+  const oldPass = oldPassword.value.trim();
+  const newPass = newPassword.value.trim();
+  const confirmPass = confirmPassword.value.trim();
 
   if (!oldPass || !newPass || !confirmPass) {
-    error.value = 'Semua field wajib diisi'
-    return
+    error.value = "Semua field wajib diisi";
+    return;
   }
 
   if (newPass.length < 6) {
-    error.value = 'Password minimal 6 karakter'
-    return
+    error.value = "Password minimal 6 karakter";
+    return;
   }
 
   if (newPass !== confirmPass) {
-    error.value = 'Konfirmasi password tidak cocok'
-    return
+    error.value = "Konfirmasi password tidak cocok";
+    return;
   }
 
-  error.value = ''
-  loading.value = true
+  error.value = "";
+  loading.value = true;
 
   try {
-    await API.patch('/employee/change-password', {
+    await API.patch("/employee/change-password", {
       old_password: oldPass,
-      new_password: newPass
-    })
+      new_password: newPass,
+    });
 
-    successMessage.value = 'Password berhasil diubah'
-    showToast.value = true
+    successMessage.value = "Password berhasil diubah";
+    showToast.value = true;
 
     setTimeout(() => {
-      showToast.value = false
-      router.back()
-    }, 1500)
-
+      showToast.value = false;
+      router.back();
+    }, 1500);
   } catch (err) {
-    error.value =
-      err.response?.data?.message ||
-      'Gagal mengubah password'
+    error.value = err.response?.data?.message || "Gagal mengubah password";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function goBack() {
-  router.back()
+  router.back();
 }
 </script>
 
 <template>
   <div class="wrapper">
-
     <div class="header">
-      <img src="/goBack.png" class="back" @click="goBack">
+      <img src="/goBack.png" class="back" @click="goBack" />
     </div>
 
     <div class="content">
       <div class="card">
-
         <h2>UBAH PASSWORD</h2>
 
         <div class="field">
           <label>Password lama</label>
           <div class="password-wrapper">
-            <input :type="showOld ? 'text' : 'password'" v-model="oldPassword" />
+            <input
+              :type="showOld ? 'text' : 'password'"
+              v-model="oldPassword"
+            />
             <img
               :src="showOld ? '/eye-hide.png' : '/eye-show.png'"
               class="toggle"
@@ -101,7 +99,10 @@ function goBack() {
         <div class="field">
           <label>Password baru</label>
           <div class="password-wrapper">
-            <input :type="showNew ? 'text' : 'password'" v-model="newPassword" />
+            <input
+              :type="showNew ? 'text' : 'password'"
+              v-model="newPassword"
+            />
             <img
               :src="showNew ? '/eye-hide.png' : '/eye-show.png'"
               class="toggle"
@@ -113,7 +114,10 @@ function goBack() {
         <div class="field">
           <label>Konfirmasi password</label>
           <div class="password-wrapper">
-            <input :type="showConfirm ? 'text' : 'password'" v-model="confirmPassword" />
+            <input
+              :type="showConfirm ? 'text' : 'password'"
+              v-model="confirmPassword"
+            />
             <img
               :src="showConfirm ? '/eye-hide.png' : '/eye-show.png'"
               class="toggle"
@@ -124,21 +128,15 @@ function goBack() {
 
         <p v-if="error" class="error">{{ error }}</p>
 
-        <button
-          class="btn"
-          @click="handleSubmit"
-          :disabled="loading"
-        >
-          {{ loading ? 'Menyimpan...' : 'Ubah password' }}
+        <button class="btn" @click="handleSubmit" :disabled="loading">
+          {{ loading ? "Menyimpan..." : "Ubah password" }}
         </button>
-
       </div>
     </div>
 
     <div v-if="showToast" class="toast">
       {{ successMessage }}
     </div>
-
   </div>
 </template>
 
@@ -173,7 +171,7 @@ function goBack() {
   background: white;
   padding: 28px 22px;
   border-radius: 22px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 h2 {

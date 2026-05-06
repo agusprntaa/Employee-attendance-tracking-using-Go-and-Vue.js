@@ -1,17 +1,17 @@
 <script setup>
 defineProps({
-  user: Object
-})
+  user: Object,
+});
 
 function formatRole(role) {
-  if (role === 'admin_cabang') return 'Admin Cabang'
-  if (role === 'super_admin') return 'Admin Pusat'
-  if (role === 'admin') return 'Admin'
-  return role
+  if (role === "admin_cabang") return "Admin Cabang";
+  if (role === "super_admin") return "Admin Pusat";
+  if (role === "admin") return "Admin";
+  return role;
 }
 
 function getInitial(name) {
-  return name?.charAt(0)?.toUpperCase() || 'A'
+  return name?.charAt(0)?.toUpperCase() || "A";
 }
 </script>
 
@@ -25,9 +25,7 @@ function getInitial(name) {
       <p class="name">{{ user.username }}</p>
       <small class="role">
         {{ formatRole(user.role) }}
-        <span v-if="user.branch_name">
-          • {{ user.branch_name }}
-        </span>
+        <span v-if="user.branch_name"> • {{ user.branch_name }} </span>
       </small>
     </div>
   </div>

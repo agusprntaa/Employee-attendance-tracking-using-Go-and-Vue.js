@@ -1,53 +1,51 @@
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from "vue-router";
+import { ref, onMounted } from "vue";
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
-const time = ref('-')
-const date = ref('-')
-const type = ref('wfo')
+const time = ref("-");
+const date = ref("-");
+const type = ref("wfo");
 
 onMounted(() => {
-  const checkTime = route.query.time
-  type.value = route.query.type || 'wfo'
+  const checkTime = route.query.time;
+  type.value = route.query.type || "wfo";
 
   //if (!checkTime) {
-    //return router.replace('/employee/dashboard')
+  //return router.replace('/employee/dashboard')
   //}
 
-  const d = new Date(checkTime)
+  const d = new Date(checkTime);
 
-  time.value = d.toLocaleTimeString('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Jakarta'
-  })
+  time.value = d.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  });
 
-  date.value = d.toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Asia/Jakarta'
-  })
-})
+  date.value = d.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
+  });
+});
 
 function goBack() {
-  router.push('/employee/dashboard')
+  router.push("/employee/dashboard");
 }
 </script>
 
 <template>
   <div class="wrapper">
-
     <div class="content">
-
       <img src="/success.png" class="image" />
 
       <h2 class="title">
-        {{ type === 'wfa' ? 'WFA Berhasil' : 'Absen Sukses' }}
+        {{ type === "wfa" ? "WFA Berhasil" : "Absen Sukses" }}
       </h2>
 
       <div class="card">
@@ -59,12 +57,8 @@ function goBack() {
         </span>
       </div>
 
-      <button class="btn" @click="goBack">
-        Done
-      </button>
-
+      <button class="btn" @click="goBack">Done</button>
     </div>
-
   </div>
 </template>
 
@@ -100,7 +94,7 @@ function goBack() {
   background: white;
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
   margin-bottom: 20px;
 }
 

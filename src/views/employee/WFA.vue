@@ -1,15 +1,15 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useLocation } from '@/composables/useLocation'
-import { checkInAPI } from '@/services/attendance'
-import LocationBanner from '@/components/LocationBanner.vue'
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useLocation } from "@/composables/useLocation";
+import { checkInAPI } from "@/services/attendance";
+import LocationBanner from "@/components/LocationBanner.vue";
 
-const router = useRouter()
+const router = useRouter();
 
-const note = ref('')
-const error = ref('')
-const loading = ref(false)
+const note = ref("");
+const error = ref("");
+const loading = ref(false);
 
 const {
   latitude,
@@ -18,109 +18,103 @@ const {
   isInRadius,
   distance,
   nearestOffice,
-  getCurrentLocation
-} = useLocation()
+  getCurrentLocation,
+} = useLocation();
 
 onMounted(async () => {
-  await getCurrentLocation()
-})
+  await getCurrentLocation();
+});
 
 async function submitWFA() {
-  if (loading.value) return
+  if (loading.value) return;
 
-  const text = note.value.trim()
+  const text = note.value.trim();
 
   if (!text) {
-    error.value = 'Catatan wajib diisi'
-    return
+    error.value = "Catatan wajib diisi";
+    return;
   }
 
   if (text.length < 10) {
-    error.value = 'Minimal 10 karakter'
-    return
+    error.value = "Minimal 10 karakter";
+    return;
   }
 
   if (text.length > 200) {
-    error.value = 'Maksimal 200 karakter'
-    return
+    error.value = "Maksimal 200 karakter";
+    return;
   }
 
-  error.value = ''
-  loading.value = true
+  error.value = "";
+  loading.value = true;
 
   try {
     await checkInAPI({
-      work_type: 'WFA',
-      wfa_reason: text
-    })
+      work_type: "WFA",
+      wfa_reason: text,
+    });
 
     router.push({
-      path: '/employee/success',
+      path: "/employee/success",
       query: {
-        type: 'wfa',
-        time: new Date().toISOString()
-      }
-    })
-
+        type: "wfa",
+        time: new Date().toISOString(),
+      },
+    });
   } catch (err) {
-    error.value =
-      err.response?.data?.message ||
-      'Gagal submit WFA'
+    error.value = err.response?.data?.message || "Gagal submit WFA";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function goBack() {
-  router.back()
+  router.back();
 }
 </script>
 
 <template>
-<div class="wrapper">
-
+  <div class="wrapper">
     <div class="header">
-      <img src="/goBack.png" class="back" @click="goBack">
+      <img src="/goBack.png" class="back" @click="goBack" />
     </div>
 
     <div class="content">
-    <LocationBanner
-    :isInRadius="isInRadius"
-    :distance="distance"
-    :nearestOffice="nearestOffice"
-    />
+      <LocationBanner
+        :isInRadius="isInRadius"
+        :distance="distance"
+        :nearestOffice="nearestOffice"
+      />
 
-    <div class="map-box">
+      <div class="map-box">
         <iframe
-            v-if="latitude && longitude"
-            :src="`https://www.google.com/maps?q=${latitude},${longitude}&z=17&output=embed`"
+          v-if="latitude && longitude"
+          :src="`https://www.google.com/maps?q=${latitude},${longitude}&z=17&output=embed`"
         ></iframe>
-    </div>
+      </div>
 
-    <div class="form">
+      <div class="form">
         <h3>Catatan / Alasan</h3>
 
         <textarea
-            v-model="note"
-            maxlength="200"
-            placeholder="Jelaskan alasan anda bekerja di lokasi ini..."
+          v-model="note"
+          maxlength="200"
+          placeholder="Jelaskan alasan anda bekerja di lokasi ini..."
         ></textarea>
-        
+
         <p v-if="error" class="error">{{ error }}</p>
 
-        <p class="counter">
-            {{ note.trim().length }}/200
-        </p>
-    </div>
+        <p class="counter">{{ note.trim().length }}/200</p>
+      </div>
 
-    <button
-    class="btn"
-    @click="submitWFA"
-    :disabled="loading || note.trim().length < 1"
-    >
-      {{ loading ? 'Mengirim...' : 'Kirim' }}
-    </button>
-</div>
+      <button
+        class="btn"
+        @click="submitWFA"
+        :disabled="loading || note.trim().length < 1"
+      >
+        {{ loading ? "Mengirim..." : "Kirim" }}
+      </button>
+    </div>
   </div>
 </template>
 

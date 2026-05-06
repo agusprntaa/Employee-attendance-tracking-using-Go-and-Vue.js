@@ -1,176 +1,171 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useLocation } from '@/composables/useLocation'
-import { useAuth } from '@/composables/useAuth'
-import { getAttendanceHistory } from '@/services/attendance'
-import { logoutAPI } from '@/services/auth'
-import API from '@/services/api'
-import { getProfileAPI } from '@/services/auth'
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useLocation } from "@/composables/useLocation";
+import { useAuth } from "@/composables/useAuth";
+import { getAttendanceHistory } from "@/services/attendance";
+import { logoutAPI } from "@/services/auth";
+import API from "@/services/api";
+import { getProfileAPI } from "@/services/auth";
 
-import ProfileCard from '@/components/ProfileCard.vue'
-import LocationBanner from '@/components/LocationBanner.vue'
+import ProfileCard from "@/components/ProfileCard.vue";
+import LocationBanner from "@/components/LocationBanner.vue";
 
-const router = useRouter()
-const { user, loadUser } = useAuth()
+const router = useRouter();
+const { user, loadUser } = useAuth();
 
-const loading = ref(false)
-const currentTime = ref('')
-const history = ref([])
-const todayData = ref(null)
-const showLogoutConfirm = ref(false)
+const loading = ref(false);
+const currentTime = ref("");
+const history = ref([]);
+const todayData = ref(null);
+const showLogoutConfirm = ref(false);
 
-const {
-  isInRadius,
-  getCurrentLocation,
-  distance,
-  nearestOffice
-} = useLocation()
+const { isInRadius, getCurrentLocation, distance, nearestOffice } =
+  useLocation();
 
-let interval = null
+let interval = null;
 
 const alreadyCheckedIn = computed(() => {
-  return todayData.value?.has_checked_in || false
-})
+  return todayData.value?.has_checked_in || false;
+});
 
 const canCheckIn = computed(() => {
-  return isInRadius.value && !alreadyCheckedIn.value && !loading.value
-})
+  return isInRadius.value && !alreadyCheckedIn.value && !loading.value;
+});
 
 // INIT
 onMounted(async () => {
   try {
-    await loadProfile()
-    loadUser()            
+    await loadProfile();
+    loadUser();
 
-    startClock()
+    startClock();
 
-    await getCurrentLocation()
-    await fetchToday()
-    await fetchHistory()
-
+    await getCurrentLocation();
+    await fetchToday();
+    await fetchHistory();
   } catch (err) {
-    console.error(err)
-    alert('Gagal memuat data')
+    console.error(err);
+    alert("Gagal memuat data");
   }
-})
+});
 
 onUnmounted(() => {
-  clearInterval(interval)
-})
+  clearInterval(interval);
+});
 //get profile
 async function loadProfile() {
-  const res = await getProfileAPI()
-  localStorage.setItem('user', JSON.stringify(res.data.data))
+  const res = await getProfileAPI();
+  localStorage.setItem("user", JSON.stringify(res.data.data));
 }
 
 // CLOCK
 function startClock() {
   interval = setInterval(() => {
-    currentTime.value = new Date().toLocaleTimeString('id-ID')
-  }, 1000)
+    currentTime.value = new Date().toLocaleTimeString("id-ID");
+  }, 1000);
 }
 
 // TODAY
 async function fetchToday() {
   try {
-    const res = await API.get('/attendance/today')
-    todayData.value = res.data.data
+    const res = await API.get("/attendance/today");
+    todayData.value = res.data.data;
   } catch (err) {
-    console.error('TODAY ERROR:', err)
+    console.error("TODAY ERROR:", err);
   }
 }
 
 // HISTORY
 async function fetchHistory() {
   try {
-    const res = await getAttendanceHistory(1, 10)
-    history.value = res.data.data.data || []
+    const res = await getAttendanceHistory(1, 10);
+    history.value = res.data.data.data || [];
   } catch (err) {
-    console.error('HISTORY ERROR:', err)
+    console.error("HISTORY ERROR:", err);
   }
 }
 
 // NAVIGATION
 function goToScan() {
-  if (!canCheckIn.value) return
-  router.push('/employee/scan')
+  if (!canCheckIn.value) return;
+  router.push("/employee/scan");
 }
 
 function goToWFA() {
-  if (loading.value) return
-  router.push('/employee/wfa')
+  if (loading.value) return;
+  router.push("/employee/wfa");
 }
 
 // TIMEZONE
 function formatTime(utc) {
-  if (!utc) return '-'
+  if (!utc) return "-";
 
-  return new Date(utc).toLocaleTimeString('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Jakarta'
-  })
+  return new Date(utc).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  });
 }
 
 function formatDateIndo(date) {
-  if (!date) return '-'
+  if (!date) return "-";
 
-  return new Date(date).toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Asia/Jakarta'
-  })
+  return new Date(date).toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
+  });
 }
 
 // FORMAT STATUS
 function formatStatus(item) {
-  if (item.work_type === 'WFA') return 'WFA'
-  if (item.status === 'PRESENT') return 'HADIR'
-  if (item.status === 'LATE') return 'TERLAMBAT'
-  return item.status || '-'
+  if (item.work_type === "WFA") return "WFA";
+  if (item.status === "PRESENT") return "HADIR";
+  if (item.status === "LATE") return "TERLAMBAT";
+  return item.status || "-";
 }
 
 function statusClass(item) {
-  if (item.work_type === 'WFA') return 'wfa'
-  if (item.status === 'PRESENT') return 'hadir'
-  if (item.status === 'LATE') return 'late'
-  return ''
+  if (item.work_type === "WFA") return "wfa";
+  if (item.status === "PRESENT") return "hadir";
+  if (item.status === "LATE") return "late";
+  return "";
 }
 
-  //logout 
+//logout
 async function handleLogout() {
   try {
-    const refresh = localStorage.getItem('refresh_token')
+    const refresh = localStorage.getItem("refresh_token");
 
     if (refresh) {
-      await logoutAPI(refresh)
+      await logoutAPI(refresh);
     }
   } catch (err) {
-    console.error('LOGOUT ERROR:', err)
+    console.error("LOGOUT ERROR:", err);
   } finally {
-    localStorage.clear()
+    localStorage.clear();
 
-    window.location.href = '/'
+    window.location.href = "/";
   }
 }
 
 async function confirmLogout() {
-  showLogoutConfirm.value = false
+  showLogoutConfirm.value = false;
 
   try {
-    const refresh = localStorage.getItem('refresh_token')
+    const refresh = localStorage.getItem("refresh_token");
 
     if (refresh) {
-      await logoutAPI(refresh)
+      await logoutAPI(refresh);
     }
   } catch (err) {
-    console.error('LOGOUT ERROR:', err)
+    console.error("LOGOUT ERROR:", err);
   } finally {
-    localStorage.clear()
-    window.location.href = '/'
+    localStorage.clear();
+    window.location.href = "/";
   }
 }
 </script>
@@ -178,7 +173,6 @@ async function confirmLogout() {
 <template>
   <div class="wrapper">
     <div class="content">
-      
       <LocationBanner
         :isInRadius="isInRadius"
         :distance="distance"
@@ -192,15 +186,13 @@ async function confirmLogout() {
         <p>Waktu sekarang</p>
       </div>
 
-      <button
-        class="btn"
-        @click="goToScan"
-        :disabled="!canCheckIn"
-      >
+      <button class="btn" @click="goToScan" :disabled="!canCheckIn">
         {{
           alreadyCheckedIn
-            ? 'SUDAH ABSEN'
-            : (!isInRadius ? 'DI LUAR RADIUS' : 'CHECK IN')
+            ? "SUDAH ABSEN"
+            : !isInRadius
+              ? "DI LUAR RADIUS"
+              : "CHECK IN"
         }}
       </button>
 
@@ -209,17 +201,13 @@ async function confirmLogout() {
         @click="goToWFA"
         :disabled="loading || alreadyCheckedIn"
       >
-        {{ alreadyCheckedIn ? 'SUDAH ABSEN' : 'WFA' }}
+        {{ alreadyCheckedIn ? "SUDAH ABSEN" : "WFA" }}
       </button>
 
       <div class="history">
         <h3>Riwayat Absensi</h3>
 
-        <div
-          class="item"
-          v-for="item in history"
-          :key="item.id"
-        >
+        <div class="item" v-for="item in history" :key="item.id">
           <div>
             <strong class="time">{{ formatTime(item.check_in) }}</strong>
             <p class="date">{{ formatDateIndo(item.date) }}</p>
@@ -242,16 +230,14 @@ async function confirmLogout() {
           <p>Yakin ingin keluar?</p>
 
           <div class="actions">
-          <button class="cancel" @click="showLogoutConfirm = false">
-            Tetap di sini
-          </button>
+            <button class="cancel" @click="showLogoutConfirm = false">
+              Tetap di sini
+            </button>
 
-          <button class="confirm" @click="confirmLogout">
-            Keluar
-          </button>
-       </div>
+            <button class="confirm" @click="confirmLogout">Keluar</button>
+          </div>
+        </div>
       </div>
-    </div>
     </div>
   </div>
 </template>
@@ -368,12 +354,12 @@ async function confirmLogout() {
   margin-bottom: 12px;
   align-items: center;
   transition: all 0.25s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
 }
 
 .item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
 }
 
 @media (min-width: 768px) {
@@ -460,8 +446,12 @@ async function confirmLogout() {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-box {
@@ -476,8 +466,14 @@ async function confirmLogout() {
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .modal-box p {

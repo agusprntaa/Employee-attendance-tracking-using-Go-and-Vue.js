@@ -1,87 +1,84 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { loginAPI } from '@/services/auth'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { loginAPI } from "@/services/auth";
 
-const router = useRouter()
+const router = useRouter();
 
-const username = ref('')
-const password = ref('')
-const loading = ref(false)
-const errorUsername = ref('')
-const errorPassword = ref('')
-const remember = ref(false)
-const errorGlobal = ref('')
-const showPassword = ref(false)
-const locationGranted = ref(false)
-const locationError = ref('')
+const username = ref("");
+const password = ref("");
+const loading = ref(false);
+const errorUsername = ref("");
+const errorPassword = ref("");
+const remember = ref(false);
+const errorGlobal = ref("");
+const showPassword = ref(false);
+const locationGranted = ref(false);
+const locationError = ref("");
 
 function requestLocation() {
-  locationError.value = ''
+  locationError.value = "";
 
   if (!navigator.geolocation) {
-    locationError.value = 'Browser tidak mendukung lokasi'
-    return
+    locationError.value = "Browser tidak mendukung lokasi";
+    return;
   }
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      locationGranted.value = true
-      locationError.value = ''
-      console.log('Lokasi:', pos.coords)
+      locationGranted.value = true;
+      locationError.value = "";
+      console.log("Lokasi:", pos.coords);
     },
     (err) => {
-      locationGranted.value = false
+      locationGranted.value = false;
 
       if (err.code === 1) {
-        locationError.value = 'Izin lokasi ditolak'
+        locationError.value = "Izin lokasi ditolak";
       } else if (err.code === 2) {
-        locationError.value = 'Lokasi tidak tersedia'
+        locationError.value = "Lokasi tidak tersedia";
       } else {
-        locationError.value = 'Gagal mengambil lokasi'
+        locationError.value = "Gagal mengambil lokasi";
       }
     },
     {
       enableHighAccuracy: true,
-      timeout: 7000
-    }
-  )
+      timeout: 7000,
+    },
+  );
 }
 
 async function login() {
-  if (loading.value) return
+  if (loading.value) return;
 
-  loading.value = true
-  errorGlobal.value = ''
+  loading.value = true;
+  errorGlobal.value = "";
 
   try {
     const res = await loginAPI({
       username: username.value.trim(),
-      password: password.value.trim()
-    })
+      password: password.value.trim(),
+    });
 
-    const { token, refresh_token, user } = res.data.data
+    const { token, refresh_token, user } = res.data.data;
 
-    localStorage.setItem('token', token)
-    localStorage.setItem('refresh_token', refresh_token)
-    localStorage.setItem('user', JSON.stringify(user))
+    localStorage.setItem("token", token);
+    localStorage.setItem("refresh_token", refresh_token);
+    localStorage.setItem("user", JSON.stringify(user));
 
-    if (user.role === 'super_admin') {
-      router.push('/admin-pusat/dashboard')
-    } else if (user.role === 'admin_cabang') {
-      router.push('/admin-cabang/dashboard')
+    if (user.role === "super_admin") {
+      router.push("/admin-pusat/dashboard");
+    } else if (user.role === "admin_cabang") {
+      router.push("/admin-cabang/dashboard");
     } else {
-      router.push('/employee/dashboard')
+      router.push("/employee/dashboard");
     }
-
   } catch (err) {
-    console.error(err)
+    console.error(err);
 
-    errorGlobal.value =
-      err.response?.data?.message || 'Login gagal'
-
+    errorGlobal.value = err.response?.data?.message || "Login gagal";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
@@ -97,7 +94,7 @@ async function login() {
         @click="requestLocation"
       >
         <span>
-          {{ locationGranted ? '✓ Lokasi aktif' : 'Klik untuk izin lokasi' }}
+          {{ locationGranted ? "✓ Lokasi aktif" : "Klik untuk izin lokasi" }}
         </span>
       </div>
       <p v-if="locationError" class="error">{{ locationError }}</p>
@@ -132,7 +129,7 @@ async function login() {
       </label>
 
       <button @click="login" :disabled="loading">
-        {{ loading ? 'Loading...' : 'Sign In' }}
+        {{ loading ? "Loading..." : "Sign In" }}
       </button>
 
       <p v-if="errorGlobal" class="error global-error">{{ errorGlobal }}</p>
@@ -196,9 +193,9 @@ label {
   margin-top: 12px;
 }
 
-input[type='text'],
-input[type='email'],
-input[type='password'] {
+input[type="text"],
+input[type="email"],
+input[type="password"] {
   width: 100%;
   padding: 14px;
   border-radius: 14px;

@@ -1,36 +1,35 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRouter } from "vue-router";
 
 defineProps({
-  user: Object
-})
+  user: Object,
+});
 
-const router = useRouter()
+const router = useRouter();
 
 function getInitials(name) {
   return name
-    ?.split(' ')
-    .map(n => n[0])
-    .join('')
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
     .slice(0, 2)
-    .toUpperCase()
+    .toUpperCase();
 }
 
-const todayDate = new Date().toLocaleDateString('id-ID', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric'
-})
+const todayDate = new Date().toLocaleDateString("id-ID", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 
 function goToChangePassword() {
-  router.push('/employee/change-password')
+  router.push("/employee/change-password");
 }
 </script>
 
 <template>
   <div class="profile-card" v-if="user">
-
     <div class="top">
       <div class="avatar">
         {{ getInitials(user.name) }}
@@ -48,7 +47,6 @@ function goToChangePassword() {
     <button class="btn-change" @click="goToChangePassword">
       UBAH PASSWORD
     </button>
-
   </div>
 </template>
 
@@ -58,13 +56,13 @@ function goToChangePassword() {
   padding: 20px;
   border-radius: 20px;
   margin-bottom: 18px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   transition: all 0.25s ease;
 }
 
 .profile-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 34px rgba(0,0,0,0.08);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
 }
 
 .top {

@@ -1,8 +1,8 @@
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute } from "vue-router";
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 </script>
 
 <template>
@@ -78,7 +78,9 @@ const route = useRoute()
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 0.18s, color 0.18s;
+  transition:
+    background 0.18s,
+    color 0.18s;
   letter-spacing: 0.2px;
 }
 

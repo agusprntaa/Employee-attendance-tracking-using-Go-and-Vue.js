@@ -2,8 +2,8 @@
 defineProps({
   isInRadius: Boolean,
   distance: Number,
-  nearestOffice: Object
-})
+  nearestOffice: Object,
+});
 </script>
 
 <template>
@@ -13,26 +13,16 @@ defineProps({
     :class="isInRadius ? 'inside' : 'outside'"
   >
     <p class="status">
-      {{
-        isInRadius
-          ? 'Dalam radius kantor'
-          : 'Di luar radius kantor'
-      }}
+      {{ isInRadius ? "Dalam radius kantor" : "Di luar radius kantor" }}
     </p>
 
     <template v-if="!isInRadius">
-      <p class="office">
-        Kantor terdekat: {{ nearestOffice.name }}
-      </p>
+      <p class="office">Kantor terdekat: {{ nearestOffice.name }}</p>
 
-      <small
-        class="distance"
-        v-if="distance !== null && !isNaN(distance)"
-      >
+      <small class="distance" v-if="distance !== null && !isNaN(distance)">
         Jarak: {{ Math.round(distance) }} m
       </small>
     </template>
-
   </div>
 </template>
 
@@ -44,7 +34,7 @@ defineProps({
   margin-bottom: 16px;
   text-align: center;
   transition: all 0.25s ease;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
 }
 
 .status {
